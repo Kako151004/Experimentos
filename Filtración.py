@@ -37,9 +37,12 @@ st.sidebar.markdown("---")
 densidad = st.sidebar.number_input(
     "Densidad del filtrado ($kg/m^3$)", value=1000.0, format="%.2f"
 )
+
+# Área con alta precisión de decimales solicitada
 area = st.sidebar.number_input(
-    "Área de filtración ($m^2$)", value=0.0500, format="%.4f", step=0.0001
+    "Área de filtración ($m^2$)", value=0.050000, format="%.6f", step=0.000001
 )
+
 viscosidad = st.sidebar.number_input(
     "Viscosidad del fluido (Pa·s)", value=0.001000, format="%.6f", step=0.00001
 )
@@ -50,7 +53,7 @@ masa_humeda = st.sidebar.number_input(
     "Masa de filtrado húmedo (g)", value=65.00, format="%.2f"
 )
 
-# Botones de control para simular el comportamiento del script original
+# Botones de control
 col_btn1, col_btn2 = st.sidebar.columns(2)
 guardar_corrida = col_btn1.button("💾 Guardar Corrida")
 limpiar_historial = col_btn2.button("🗑️ Limpiar Todo")
@@ -135,7 +138,7 @@ if len(Historial1) > 0:
         f"📊 Resumen de Corridas Registradas ({len(Historial1)} en total)"
     )
 
-    # Mostrar tabla resumen similar al script original
+    # Mostrar tabla resumen
     resumen_data = []
     for item in Historial1:
         resumen_data.append(
@@ -151,7 +154,7 @@ if len(Historial1) > 0:
         )
     st.dataframe(resumen_data, use_container_width=True)
 
-    # Pestañas con los gráficos idénticos a tu script original
+    # Pestañas con los gráficos
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
         [
             "📈 Curvas Básicas",
@@ -248,9 +251,9 @@ if len(Historial1) > 0:
         a1 = [item["Alpha"] for item in Historial1]
         fig6, ax6 = plt.subplots(figsize=(8, 5))
         ax6.plot(p1, a1, marker="o", color="purple", linewidth=2)
-        ax6.set_title("Resistencia Específica de la Torta ($\alpha$) vs Presión")
+        ax6.set_title("Resistencia Específica de la Torta (α) vs Presión")
         ax6.set_xlabel("Presión (Pa)")
-        ax6.set_ylabel("$\alpha$ (m/kg)")
+        ax6.set_ylabel("α (m/kg)")
         ax6.grid(True)
         st.pyplot(fig6)
 

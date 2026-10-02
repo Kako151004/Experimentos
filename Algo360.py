@@ -1,7 +1,11 @@
 import math
 import streamlit as st
 import sympy as sp
-
+st.set_page_config(
+    page_title="Calculadora de Reynolds y Fluidos No-Newtonianos",
+    page_icon="🧪",
+    layout="wide",
+)
 # Título de la aplicación
 st.title("Calculadora de Flujo y Factor de Fricción")
 st.markdown(

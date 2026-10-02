@@ -65,7 +65,8 @@ with col2:
     st.metric(label="Pendiente (m)", value=f"{m:.4f}")
     st.metric(label="Intercepto (b)", value=f"{b:.4f}")
     st.metric(label="Coeficiente de Correlación (R²)", value=f"{r2:.4f}")
-    st.info( fórmula de interpolación utilizada: $C = \\frac{\\text{ABS} - b}{m}$ )
+    # Corrección de la sintaxis del texto con LaTeX
+    st.info(r"Fórmula de interpolación utilizada: $C = \frac{\text{ABS} - b}{m}$")
 
 st.markdown("---")
 

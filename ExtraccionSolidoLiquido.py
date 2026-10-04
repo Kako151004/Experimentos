@@ -33,9 +33,7 @@ try:
     abs_std = np.array([float(x) for x in input_abs_std.split()])
     
     if len(conc_std) == len(abs_std) and len(conc_std) > 1:
-        # Regresión lineal (grado 1)
         m, b = np.polyfit(conc_std, abs_std, 1)
-        # Coeficiente de determinación R^2
         p = np.poly1d([m, b])
         y_fit = p(conc_std)
         ss_res = np.sum((abs_std - y_fit)**2)
@@ -46,7 +44,7 @@ try:
 except:
     m, b, r2 = 1.0, 0.0, 0.0
 
-st.sidebar.success(f"Ecuación: $A = {m:.4f}C + {b:.4f}$ | $R^2 = {r2:.4f}$")
+st.sidebar.success(f"Ecuación: A = {m:.4f}C + {b:.4f} | R² = {r2:.4f}")
 
 st.sidebar.markdown("---")
 st.sidebar.header("⚙️ 2. Parámetros de Extracción")
@@ -109,16 +107,14 @@ if guardar:
 st.markdown("---")
 st.header("📊 Análisis de Resultados y Curva de Calibrado")
 
-# Mostrar Curva de Calibrado en la parte superior o en pestañas principales
 col_c1, col_c2 = st.columns([1, 1])
 with col_c1:
     st.subheader("📈 Gráfica de la Curva de Calibrado")
     fig_cal, ax_cal = plt.subplots(figsize=(6, 4))
     ax_cal.scatter(conc_std, abs_std, color="purple", label="Estándares experimentales", zorder=5)
     
-    # Línea de tendencia
     x_line = np.linspace(min(conc_std), max(conc_std), 100)
-    ax_cal.plot(x_line, m * x_line + b, color="orange", linestyle="--", label=f"A = {m:.4f}C + {b:.4f}\n$R^2$ = {r2:.4f}")
+    ax_cal.plot(x_line, m * x_line + b, color="orange", linestyle="--", label=f"A = {m:.4f}C + {b:.4f}\nR² = {r2:.4f}")
     
     ax_cal.set_xlabel("Concentración")
     ax_cal.set_ylabel("Absorbancia ($A_{600}$)")
@@ -130,12 +126,16 @@ with col_c1:
 with col_c2:
     st.subheader("📝 Parámetros de la Recta")
     st.markdown(
-        f"""
+        """
         La regresión lineal obtenida a partir de los estándares ingresados permite transformar 
         los valores de absorbancia de las muestras experimentales en **concentraciones** mediante la fórmula despejada:
-        
-        $$C = \\frac{A - b}{m}$$
-        
+        """
+    )
+    # Uso de st.latex para evitar conflictos con '\f' en f-strings de Python
+    st.latex(r"C = \frac{A - b}{m}")
+    
+    st.markdown(
+        f"""
         * **Pendiente ($m$):** `{m:.5f}`
         * **Intercepción ($b$):** `{b:.5f}`
         * **Coeficiente de Correlación ($R^2$):** `{r2:.4f}`
@@ -168,23 +168,16 @@ if len(historial) > 0:
         r2_arr = item["R2"]
         r3_arr = item["R3"]
 
-        # Promedio de absorbancia
         a_prom = (r1_arr + r2_arr + r3_arr) / 3.0
-
-        # Desviación estándar muestral
         suma_cuad = (r1_arr - a_prom)**2 + (r2_arr - a_prom)**2 + (r3_arr - a_prom)**2
         s_val = np.sqrt(suma_cuad / 2.0)
-
-        # Coeficiente de variación
         cv_val = np.divide(s_val, a_prom, out=np.zeros_like(s_val), where=a_prom!=0) * 100
 
-        # Concentración promedio usando la curva de calibrado (C = (A - b) / m)
         if m != 0:
             c_prom = (a_prom - b) / m
         else:
             c_prom = np.zeros_like(a_prom)
 
-        # Extracción relativa normalizada
         a_inicial = a_prom[0]
         a_final = a_prom[-1]
         denominador_erel = a_final - a_inicial
@@ -193,7 +186,6 @@ if len(historial) > 0:
         else:
             erel_val = np.zeros_like(a_prom)
 
-        # Velocidad aparente de extracción
         dt = np.diff(tiempos)
         da = np.diff(a_prom)
         r_a = np.divide(da, dt, out=np.zeros_like(da), where=dt!=0)
@@ -217,7 +209,6 @@ if len(historial) > 0:
     nombres_conds = list(datos_procesados.keys())
     tabs = st.tabs([f"🍇 {c}" for c in nombres_conds] + ["⚡ Análisis de Agitación", "📈 Gráfica Global"])
 
-    # Pestañas individuales por condición
     for idx, cond in enumerate(nombres_conds):
         d = datos_procesados[cond]
         with tabs[idx]:
@@ -248,7 +239,6 @@ if len(historial) > 0:
             else:
                 st.info("Se requieren al menos 2 tiempos de muestreo para calcular las velocidades.")
 
-    # Pestaña de Análisis Comparativo de Agitación
     with tabs[len(nombres_conds)]:
         st.markdown("### ⚡ Efecto de la Agitación (Sin Agitación vs Con Agitación)")
         st.markdown("Evaluación del impacto hidrodinámico comparando los resultados por tipo de muestra vegetal.")
@@ -284,7 +274,6 @@ if len(historial) > 0:
         if not comparaciones_encontradas:
             st.warning("⚠️ Para visualizar esta sección, registra al menos una fruta evaluando ambas condiciones de agitación.")
 
-    # Pestaña de Gráfica Global
     with tabs[len(nombres_conds) + 1]:
         st.markdown("### 📈 Gráfica Global de Cinética de Extracción")
         st.markdown("Evolución temporal de la concentración promedio obtenida a través de la curva de calibrado.")

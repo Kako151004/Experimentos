@@ -11,15 +11,14 @@ st.title("🍇 Cinética de Extracción Sólido-Líquido y Curva de Calibrado")
 st.markdown(
     """
     Esta aplicación procesa los datos experimentales para el análisis cinético de procesos de extracción 
-    sólido-líquido. Incluye la construcción de la **curva de calibrado** mediante regresión lineal, 
-    la gestión de réplicas por matriz vegetal, el cálculo de promedios, desviaciones estándar, 
-    coeficientes de variación, velocidades aparentes de extracción y el efecto de la agitación.
+    sólido-líquido. Permite gestionar un **número dinámico de réplicas** por condición, construir la curva de calibrado, 
+    calcular promedios, desviaciones estándar, coeficientes de variación, velocidades aparentes y evaluar el efecto de la agitación.
     """
 )
 
-# Inicializar historial en la sesión
-if "historial" not in st.session_state:
-    st.session_state.historial = []
+# Inicializar historial en la sesión para múltiples réplicas por condición
+if "historial_condiciones" not in st.session_state:
+    st.session_state.historial_condiciones = {}
 
 # --- 1. SECCIÓN DE CURVA DE CALIBRADO ---
 st.sidebar.header("📈 1. Curva de Calibrado")
@@ -58,50 +57,49 @@ except:
     tiempos = np.array([0.0, 5.0, 10.0, 15.0, 30.0])
 
 st.sidebar.markdown("---")
-st.sidebar.header("🧪 3. Registro por Condición")
+st.sidebar.header("🧪 3. Registro Dinámico de Réplicas")
 
 frutas_disponibles = ["Manzana", "Pera", "Durazno/Nectarina", "Kiwi", "Frutos Rojos", "Otra Fruta"]
 fruta_sel = st.sidebar.selectbox("Seleccione la Fruta / Matriz", frutas_disponibles)
 agitacion_sel = st.sidebar.selectbox("Condición de Agitación", ["Sin Agitación (0 rpm)", "Con Agitación (200 rpm)"])
 
 condicion_nombre = f"{fruta_sel} - {agitacion_sel}"
-st.sidebar.info(f"Registrando triplicado para: **{condicion_nombre}**")
+st.sidebar.info(f"Condición seleccionada: **{condicion_nombre}**")
 
-st.sidebar.markdown("Ingrese las absorbancias experimentales para las tres réplicas:")
-abs_r1_input = st.sidebar.text_area("Absorbancias Réplica 1 ($A_1$)", "0.05 0.12 0.18 0.22 0.25")
-abs_r2_input = st.sidebar.text_area("Absorbancias Réplica 2 ($A_2$)", "0.06 0.13 0.17 0.23 0.26")
-abs_r3_input = st.sidebar.text_area("Absorbancias Réplica 3 ($A_3$)", "0.05 0.11 0.19 0.21 0.24")
+# Mostrar cuántas réplicas se llevan acumuladas para esta condición
+replicas_actuales = st.session_state.historial_condiciones.get(condicion_nombre, [])
+st.sidebar.write(f"📝 Réplicas guardadas para esta condición: **{len(replicas_actuales)}**")
 
-col_b1, col_b2 = st.sidebar.columns(2)
-guardar = col_b1.button("💾 Guardar Condición")
-limpiar = col_b2.button("🗑️ Limpiar Todo")
+input_nueva_replica = st.sidebar.text_area("Absorbancias de la nueva réplica", "0.05 0.12 0.18 0.22 0.25")
 
-if limpiar:
-    st.session_state.historial = []
-    st.success("Historial reiniciado correctamente.")
+col_b1, col_b2, col_b3 = st.sidebar.columns(3)
+add_rep = col_b1.button("➕ Añadir Réplica")
+reset_cond = col_b2.button("🔄 Borrar Condición")
+limpiar_todo = col_b3.button("🗑️ Limpiar Todo")
 
-if guardar:
+if limpiar_todo:
+    st.session_state.historial_condiciones = {}
+    st.success("Se ha reiniciado todo el historial.")
+    st.rerun()
+
+if reset_cond:
+    if condicion_nombre in st.session_state.historial_condiciones:
+        del st.session_state.historial_condiciones[condicion_nombre]
+        st.success(f"Se borraron las réplicas de **{condicion_nombre}**.")
+        st.rerun()
+
+if add_rep:
     try:
-        arr_r1 = np.array([float(x) for x in abs_r1_input.split()])
-        arr_r2 = np.array([float(x) for x in abs_r2_input.split()])
-        arr_r3 = np.array([float(x) for x in abs_r3_input.split()])
-
-        if len(arr_r1) != len(tiempos) or len(arr_r2) != len(tiempos) or len(arr_r3) != len(tiempos):
-            st.sidebar.error("⚠️ La cantidad de valores de absorbancia debe coincidir exactamente con los tiempos.")
+        arr_rep = np.array([float(x) for x in input_nueva_replica.split()])
+        if len(arr_rep) != len(tiempos):
+            st.sidebar.error("⚠️ La cantidad de valores de absorbancia debe coincidir exactamente con la cantidad de tiempos.")
         else:
-            st.session_state.historial = [h for h in st.session_state.historial if h["Condicion"] != condicion_nombre]
-            
-            st.session_state.historial.append({
-                "Condicion": condicion_nombre,
-                "Fruta": fruta_sel,
-                "Agitacion": agitacion_sel,
-                "R1": arr_r1,
-                "R2": arr_r2,
-                "R3": arr_r3
-            })
-            st.sidebar.success(f"✅ Condición **{condicion_nombre}** guardada con éxito.")
+            if condicion_nombre not in st.session_state.historial_condiciones:
+                st.session_state.historial_condiciones[condicion_nombre] = []
+            st.session_state.historial_condiciones[condicion_nombre].append(arr_rep)
+            st.sidebar.success(f"✅ Réplica #{len(st.session_state.historial_condiciones[condicion_nombre])} añadida con éxito a **{condicion_nombre}**.")
     except Exception as e:
-        st.sidebar.error(f"Error al procesar los datos: {e}")
+        st.sidebar.error(f"Error al procesar la réplica: {e}")
 
 # --- PANTALLA PRINCIPAL ---
 st.markdown("---")
@@ -125,13 +123,7 @@ with col_c1:
 
 with col_c2:
     st.subheader("📝 Parámetros de la Recta")
-    st.markdown(
-        """
-        La regresión lineal obtenida a partir de los estándares ingresados permite transformar 
-        los valores de absorbancia de las muestras experimentales en **concentraciones** mediante la fórmula despejada:
-        """
-    )
-    # Uso de st.latex para evitar conflictos con '\f' en f-strings de Python
+    st.markdown("La regresión lineal obtenida permite transformar la absorbancia en **concentraciones**:")
     st.latex(r"C = \frac{A - b}{m}")
     
     st.markdown(
@@ -148,29 +140,35 @@ with col_c2:
     st.dataframe(df_cal_tabla, use_container_width=True)
 
 # --- PROCESAMIENTO CINÉTICO ---
-historial = st.session_state.historial
+historial = st.session_state.historial_condiciones
 
 if len(historial) > 0:
     st.markdown("---")
-    st.header("📋 Cinética de Extracción por Muestra")
+    st.header("📋 Cinética de Extracción por Muestra (Réplicas Dinámicas)")
     st.markdown(
         """
-        A continuación se muestran las tablas detalladas con los promedios de absorbancia, 
-        la desviación estándar muestral ($s$), el coeficiente de variación ($CV\%$), la velocidad aparente 
-        y la conversión a concentración utilizando la curva de calibrado.
+        Se procesan todas las condiciones que tengan réplicas registradas, calculando automáticamente 
+        los promedios, la desviación estándar muestral ($s$), el coeficiente de variación ($CV\%$), 
+        la concentración mediante la curva de calibrado y la velocidad aparente.
         """
     )
 
     datos_procesados = {}
-    for item in historial:
-        cond = item["Condicion"]
-        r1_arr = item["R1"]
-        r2_arr = item["R2"]
-        r3_arr = item["R3"]
+    for cond, lista_reps in historial.items():
+        if len(lista_reps) == 0:
+            continue
+        
+        matriz_reps = np.array(lista_reps) # Filas = réplicas, Columnas = tiempos
+        
+        # Promedio a lo largo de las réplicas
+        a_prom = np.mean(matriz_reps, axis=0)
+        
+        # Desviación estándar muestral (si hay 1 réplica, s = 0)
+        if len(lista_reps) > 1:
+            s_val = np.std(matriz_reps, axis=0, ddof=1)
+        else:
+            s_val = np.zeros_like(a_prom)
 
-        a_prom = (r1_arr + r2_arr + r3_arr) / 3.0
-        suma_cuad = (r1_arr - a_prom)**2 + (r2_arr - a_prom)**2 + (r3_arr - a_prom)**2
-        s_val = np.sqrt(suma_cuad / 2.0)
         cv_val = np.divide(s_val, a_prom, out=np.zeros_like(s_val), where=a_prom!=0) * 100
 
         if m != 0:
@@ -190,13 +188,15 @@ if len(historial) > 0:
         da = np.diff(a_prom)
         r_a = np.divide(da, dt, out=np.zeros_like(da), where=dt!=0)
 
+        partes = cond.split(" - ")
+        fruta = partes[0]
+        agitacion = " - ".join(partes[1:])
+
         datos_procesados[cond] = {
-            "Fruta": item["Fruta"],
-            "Agitacion": item["Agitacion"],
+            "Fruta": fruta,
+            "Agitacion": agitacion,
             "Tiempos": tiempos,
-            "R1": r1_arr,
-            "R2": r2_arr,
-            "R3": r3_arr,
+            "MatrizReps": matriz_reps,
             "AProm": a_prom,
             "CProm": c_prom,
             "S": s_val,
@@ -213,20 +213,21 @@ if len(historial) > 0:
         d = datos_procesados[cond]
         with tabs[idx]:
             st.markdown(f"### Condición evaluada: **{cond}**")
-            st.markdown("Desglose de réplicas experimentales, estadística descriptiva y transformación a concentración.")
+            st.markdown(f"Total de réplicas analizadas: **{len(d['MatrizReps'])}**")
             
-            st.markdown("#### 📊 Tabla Principal: Absorbancias, Promedios y Concentración Calculada")
-            df_principal = pd.DataFrame({
-                "Tiempo (min)": d["Tiempos"],
-                "Réplica 1 ($A_1$)": d["R1"],
-                "Réplica 2 ($A_2$)": d["R2"],
-                "Réplica 3 ($A_3$)": d["R3"],
-                "Promedio ($\overline{A}$)": [f"{v:.4f}" for v in d["AProm"]],
-                "Desv. Estándar ($s$)": [f"{v:.4f}" for v in d["S"]],
-                "CV (%)": [f"{v:.2f}%" for v in d["CV"]],
-                "Concentración ($\overline{C}$)": [f"{v:.4f}" for v in d["CProm"]],
-                "Extracción Relativa ($E_{rel}\%$)": [f"{v:.2f}%" for v in d["ERel"]]
-            })
+            # Construir tabla principal dinámicamente con las réplicas añadidas
+            dict_tabla = {"Tiempo (min)": d["Tiempos"]}
+            for i, rep_vals in enumerate(d["MatrizReps"]):
+                dict_tabla[f"Réplica {i+1} ($A$)"] = rep_vals
+            
+            dict_tabla["Promedio ($\overline{A}$)"] = [f"{v:.4f}" for v in d["AProm"]]
+            dict_tabla["Desv. Estándar ($s$)"] = [f"{v:.4f}" for v in d["S"]]
+            dict_tabla["CV (%)"] = [f"{v:.2f}%" for v in d["CV"]]
+            dict_tabla["Concentración ($\overline{C}$)"] = [f"{v:.4f}" for v in d["CProm"]]
+            dict_tabla["Extracción Relativa ($E_{rel}\%$)"] = [f"{v:.2f}%" for v in d["ERel"]]
+
+            st.markdown("#### 📊 Tabla Principal: Réplicas, Promedios y Concentración")
+            df_principal = pd.DataFrame(dict_tabla)
             st.dataframe(df_principal, use_container_width=True)
 
             st.markdown("#### ⚡ Tabla Secundaria: Velocidad Aparente de Extracción ($r_A = \Delta A / \Delta t$)")
@@ -241,7 +242,7 @@ if len(historial) > 0:
 
     with tabs[len(nombres_conds)]:
         st.markdown("### ⚡ Efecto de la Agitación (Sin Agitación vs Con Agitación)")
-        st.markdown("Evaluación del impacto hidrodinámico comparando los resultados por tipo de muestra vegetal.")
+        st.markdown("Evaluación del impacto hidrodinámico comparando los promedios por tipo de muestra vegetal.")
 
         frutas_registradas = list(set([d["Fruta"] for d in datos_procesados.values()]))
         comparaciones_encontradas = False
@@ -272,7 +273,7 @@ if len(historial) > 0:
                 st.markdown("---")
 
         if not comparaciones_encontradas:
-            st.warning("⚠️ Para visualizar esta sección, registra al menos una fruta evaluando ambas condiciones de agitación.")
+            st.warning("⚠️ Para visualizar esta sección, registra al menos una fruta evaluando ambas condiciones (Sin Agitación y Con Agitación).")
 
     with tabs[len(nombres_conds) + 1]:
         st.markdown("### 📈 Gráfica Global de Cinética de Extracción")
@@ -297,4 +298,4 @@ if len(historial) > 0:
         st.pyplot(fig)
 
 else:
-    st.info("👈 Ingresa los datos de tu curva de calibrado y guarda al menos una condición en la barra lateral para iniciar el análisis.")
+    st.info("👈 Ingresa los datos de tu curva de calibrado y añade al menos una réplica en la barra lateral para iniciar el análisis.")

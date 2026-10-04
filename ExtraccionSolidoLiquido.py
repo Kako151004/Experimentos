@@ -10,7 +10,7 @@ st.set_page_config(
 st.title("🍇 Cinética de Extracción y Curva de Calibrado")
 st.markdown(
     """
-Esta aplicación procesa la curva de calibrado, administra réplicas experimentales sin errores de tipeo y calcula automáticamente promedios y desviaciones estándar.
+Esta aplicación procesa la curva de calibrado, administra réplicas experimentales y calcula automáticamente parámetros avanzados como rendimiento, coeficiente de variación y efectos de agitación.
 """
 )
 
@@ -19,7 +19,6 @@ if "HistorialExtraccion" not in st.session_state:
     st.session_state.HistorialExtraccion = []
 
 if "ListaCondiciones" not in st.session_state:
-    # Lista inicial basada en tus 4 frutas con y sin agitación para evitar tipeo manual
     st.session_state.ListaCondiciones = [
         "Manzana - Con Agitación", "Manzana - Sin Agitación",
         "Pera - Con Agitación", "Pera - Sin Agitación",
@@ -28,10 +27,13 @@ if "ListaCondiciones" not in st.session_state:
     ]
 
 # --- PARÁMETROS GENERALES Y CALIBRACIÓN ---
-st.sidebar.header("⚙️ Parámetros Generales y Calibración")
+st.sidebar.header("⚙️️ Parámetros Generales y Calibración")
 
 volumen_agua = st.sidebar.number_input(
     "Volumen de agua (L)", value=1.00, format="%.3f"
+)
+masa_fruta = st.sidebar.number_input(
+    "Masa de la muestra vegetal (g)", value=50.00, format="%.2f"
 )
 input_tiempos = st.sidebar.text_area(
     "Tiempos de muestreo (min) (separados por espacio)", "0 5 10 15 20 30"
@@ -53,7 +55,7 @@ try:
     abs_e = np.array([float(x) for x in input_abs_e.split()])
 
     if len(conc_e) != len(abs_e):
-        st.error("⚠ La cantidad de valores en Concentración Estándar y ABS Estándar debe ser la misma.")
+        st.error("⚠️ La cantidad de valores en Concentración Estándar y ABS Estándar debe ser la misma.")
     else:
         m, b, r, _, _ = linregress(conc_e, abs_e)
         r2 = r**2
@@ -61,7 +63,7 @@ try:
         col_cal1, col_cal2 = st.columns([1, 1])
         with col_cal1:
             st.subheader("📊 Curva de Calibrado Espectrofotométrico")
-            st.write(f"- **Pendiente ($m$):** `{m:.4f}` | **Intercepto ($b$):** `{b:.4f}` | **R²:** `{r2:.4f}`")
+            st.write(f"- **Pendiente (m):** `{m:.4f}` | **Intercepto (b):** `{b:.4f}` | **R²:** `{r2:.4f}`")
 
             fig_cal, ax_cal = plt.subplots(figsize=(6, 3.5))
             ax_cal.scatter(conc_e, abs_e, color="blue", label="Estándares")
@@ -77,27 +79,24 @@ try:
 except Exception as e:
     st.error(f"Error en los datos de calibración: {e}")
 
-# --- INGRESO DE DATOS EXPERIMENTALES (RÉPLICAS CON SELECTOR ANTITIEMPO) ---
+# --- INGRESO DE DATOS EXPERIMENTALES ---
 st.sidebar.markdown("---")
 st.sidebar.header("🧪 Ingreso de Réplicas")
-st.sidebar.info("💡 Selecciona la condición para evitar errores de tipeo y agrupar automáticamente las 3 réplicas.")
-
-# Selector para evitar duplicados por errores de tipeo
 tipo_ingreso = st.sidebar.radio("Modo de Condición", ["Elegir existente", "Crear nueva condición"])
 
 if tipo_ingreso == "Elegir existente":
-    condicion_nombre = st.sidebar.selectbox("Selecciona la Condición", st.session_state.ListaCondiciones)
+    condicion_base = st.sidebar.selectbox("Selecciona la Condición Base", st.session_state.ListaCondiciones)
+    condicion_nombre = condicion_base
 else:
-    nueva_cond = st.sidebar.text_input("Nombre de la nueva condición", "Fruta Nueva - Con Agitación")
-    condicion_nombre = nueva_cond.strip()
+    fruta_nueva = st.sidebar.text_input("Nombre de la nueva fruta o matriz", "Zanahoria")
+    agitacion_nueva = st.sidebar.selectbox("Condición de agitación", ["Con Agitación", "Sin Agitación"])
+    condicion_nombre = f"{fruta_nueva.strip()} - {agitacion_nueva}"
+    
     if condicion_nombre and condicion_nombre not in st.session_state.ListaCondiciones:
         st.session_state.ListaCondiciones.append(condicion_nombre)
 
 input_abs_exp = st.sidebar.text_area(
     "ABS experimental (600 nm) (separados por espacio)", "0.05 0.15 0.22 0.28 0.31 0.33"
-)
-concentracion_ref = st.sidebar.number_input(
-    "Concentración de referencia (g/L)", value=2.50, format="%.2f"
 )
 
 col_b1, col_b2 = st.sidebar.columns(2)
@@ -117,11 +116,12 @@ if guardar_corrida:
         else:
             concentracion = (abs_exp - b) / m
             masa_aparente = concentracion * volumen_agua
-            extraccion_relativa = (
-                (concentracion / concentracion_ref) * 100
-                if concentracion_ref > 0
-                else np.zeros_like(concentracion)
-            )
+            
+            # Extracción relativa corregida usando el último tiempo como referencia del 100% (o estado estacionario)
+            c_ultimo = concentracion[-1] if len(concentracion) > 0 and concentracion[-1] > 0 else 1.0
+            extraccion_relativa = (concentracion / c_ultimo) * 100
+            
+            rendimiento_aparente = (masa_aparente / masa_fruta) * 100 if masa_fruta > 0 else np.zeros_like(masa_aparente)
 
             grupo_base = condicion_nombre.strip()
             replicas_existentes = [item for item in st.session_state.HistorialExtraccion if item["Grupo"] == grupo_base]
@@ -136,6 +136,7 @@ if guardar_corrida:
                     "Concentracion": concentracion,
                     "MasaAparente": masa_aparente,
                     "ExtraccionRelativa": extraccion_relativa,
+                    "RendimientoAparente": rendimiento_aparente,
                 }
             )
             st.sidebar.success(f"✅ Guardado: **{grupo_base}** (Réplica #{num_replica})")
@@ -149,7 +150,6 @@ if len(historial) > 0:
     st.markdown("---")
     st.subheader(f"📋 Panel de Resultados y Control ({len(historial)} registros totales)")
 
-    # Solo considerar grupos que tengan datos en el historial
     grupos_unicos = sorted(list(set(item["Grupo"] for item in historial)))
     
     datos_agrupados = {}
@@ -158,11 +158,17 @@ if len(historial) > 0:
         matriz_conc = np.array([c["Concentracion"] for c in corridas_grupo])
         matriz_masa = np.array([c["MasaAparente"] for c in corridas_grupo])
         matriz_ext = np.array([c["ExtraccionRelativa"] for c in corridas_grupo])
+        matriz_rend = np.array([c["RendimientoAparente"] for c in corridas_grupo])
 
         conc_prom = np.mean(matriz_conc, axis=0)
         conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_prom)
+        
+        # Coeficiente de Variación opcional (%)
+        cv_opcional = np.where(conc_prom > 0, (conc_std / conc_prom) * 100, 0.0)
+
         masa_prom = np.mean(matriz_masa, axis=0)
         ext_prom = np.mean(matriz_ext, axis=0)
+        rend_prom = np.mean(matriz_rend, axis=0)
 
         tm = np.diff(tiempo_muestreo)
         c_diff = np.diff(conc_prom)
@@ -172,26 +178,30 @@ if len(historial) > 0:
             "Tiempos": tiempo_muestreo,
             "ConcProm": conc_prom,
             "ConcStd": conc_std,
+            "CV": cv_opcional,
             "MasaProm": masa_prom,
             "ExtProm": ext_prom,
+            "RendProm": rend_prom,
             "VelocidadPromedio": velocidad_promedio_grupo,
             "Corridas": corridas_grupo
         }
 
-    tabs = st.tabs([f"🧪 {g}" for g in grupos_unicos] + ["📊 Tabla Global y Gráficos", "⚡ Velocidades Estadísticas"])
+    tabs = st.tabs([f"🧪 {g}" for g in grupos_unicos] + ["📊 Tabla Global y Gráficos", "⚡ Velocidades & Efecto Agitación"])
 
     for idx, grupo in enumerate(grupos_unicos):
         d = datos_agrupados[grupo]
         with tabs[idx]:
             st.write(f"### Condición: **{grupo}** ({len(d['Corridas'])} réplica(s) agrupadas)")
 
-            st.write("#### Resumen Estadístico del Grupo (Promedio Único ± SD)")
+            st.write("#### Resumen Estadístico Completo (Promedio ± SD, CV, Masa, Extracción y Rendimiento)")
             tabla_resumen = {
                 "Tiempo (min)": tiempo_muestreo,
                 "Conc. Promedio (g/L)": [f"{v:.2f}" for v in d["ConcProm"]],
                 "Desv. Estándar (± SD)": [f"{v:.2f}" for v in d["ConcStd"]],
-                "Masa Aparente Prom. (g)": [f"{v:.2f}" for v in d["MasaProm"]],
-                "Extracción Relativa Prom. (%)": [f"{v:.2f}" for v in d["ExtProm"]],
+                "Coef. de Variación (CV %)": [f"{v:.2f}%" for v in d["CV"]],
+                "Masa Soluto Extractor (g)": [f"{v:.2f}" for v in d["MasaProm"]],
+                "Extracción Relativa Corr. (%)": [f"{v:.2f}%" for v in d["ExtProm"]],
+                "Rendimiento Aparente (%)": [f"{v:.2f}%" for v in d["RendProm"]],
             }
             st.dataframe(tabla_resumen, use_container_width=True)
 
@@ -209,7 +219,7 @@ if len(historial) > 0:
             for c_item in d["Corridas"]:
                 ax_g.plot(tiempo_muestreo, c_item["Concentracion"], linestyle="--", alpha=0.4, label=f"R{c_item['ID_Replica']}")
             
-            ax_g.errorbar(tiempo_muestreo, d["ConcProm"], yerr=d["ConcStd"], fmt="o-", color="black", linewidth=2, capsize=4, label="Promedio Único ± SD")
+            ax_g.errorbar(tiempo_muestreo, d["ConcProm"], yerr=d["ConcStd"], fmt="o-", color="black", linewidth=2, capsize=4, label="Promedio ± SD")
             ax_g.set_xlabel("Tiempo (min)")
             ax_g.set_ylabel("Concentración (g/L)")
             ax_g.set_title(f"Cinética con Réplicas: {grupo}")
@@ -217,22 +227,20 @@ if len(historial) > 0:
             ax_g.legend()
             st.pyplot(fig_g)
 
-    # --- PANEL DE SELECCIÓN CON CHECKBOXES DIVIDIDO ---
+    # --- PANEL DE SELECCIÓN CON CHECKBOXES ---
     st.markdown("---")
     st.subheader("🎛️ Panel de Control de Visualización")
-    st.markdown("Selecciona qué deseas graficar o comparar sin saturar el gráfico:")
-
     col_chk1, col_chk2 = st.columns(2)
 
     with col_chk1:
-        st.markdown("##### 🔍 Réplicas Individuales (Opcional)")
+        st.markdown("##### 🔍 Réplicas Individuales")
         corridas_seleccionadas = []
         for item in historial:
             if st.checkbox(item["EtiquetaCompleta"], value=False, key=f"chk_corrida_{item['EtiquetaCompleta']}"):
                 corridas_seleccionadas.append(item)
 
     with col_chk2:
-        st.markdown("##### 📊 Promedios de Grupos (Recomendado)")
+        st.markdown("##### 📊 Promedios de Grupos")
         grupos_seleccionados = []
         for grupo in grupos_unicos:
             if st.checkbox(f"Promedio: {grupo}", value=True, key=f"chk_grupo_{grupo}"):
@@ -240,11 +248,11 @@ if len(historial) > 0:
 
     # Pestaña de Tabla Global y Gráfica Global
     with tabs[len(grupos_unicos)]:
-        st.subheader("📋 Tabla Consolidada de Todos los Grupos (Promedios y SD)")
+        st.subheader("📋 Tabla Consolidada de Todos los Grupos")
         tabla_global = {"Tiempo (min)": tiempo_muestreo}
         for grupo in grupos_unicos:
-            tabla_global[f"{grupo} (Prom. g/L)"] = [f"{v:.2f}" for v in datos_agrupados[grupo]["ConcProm"]]
-            tabla_global[f"{grupo} (± SD)"] = [f"{v:.2f}" for v in datos_agrupados[grupo]["ConcStd"]]
+            tabla_global[f"{grupo} (g/L)"] = [f"{v:.2f}" for v in datos_agrupados[grupo]["ConcProm"]]
+            tabla_global[f"{grupo} (CV %)"] = [f"{v:.2f}%" for v in datos_agrupados[grupo]["CV"]]
         st.dataframe(tabla_global, use_container_width=True)
 
         st.markdown("---")
@@ -283,11 +291,42 @@ if len(historial) > 0:
             plt.tight_layout()
             st.pyplot(fig_glob)
         else:
-            st.warning("⚠️ Selecciona al menos un grupo o réplica en el panel de checkboxes superior.")
+            st.warning("⚠️ Selecciona al menos un grupo o réplica en el panel superior.")
 
-    # Pestaña de Velocidades Estadísticas Globales
+    # Pestaña de Velocidades y Efecto de Agitación
     with tabs[len(grupos_unicos) + 1]:
-        st.subheader("⚡ Comparación de Velocidades Promedio por Grupos")
+        st.subheader("⚡ Análisis de Efecto de Agitación (Diferencia Absoluta y Porcentual)")
+        
+        # Identificar pares de frutas (Con vs Sin Agitación)
+        frutas_base = set([g.split(" - ")[0] for g in grupos_unicos if " - " in g])
+        efecto_agitacion_datos = []
+        
+        for fruta in frutas_base:
+            cond_con = f"{fruta} - Con Agitación"
+            cond_sin = f"{fruta} - Sin Agitación"
+            
+            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
+                c_con_final = datos_agrupados[cond_con]["ConcProm"][-1]
+                c_sin_final = datos_agrupados[cond_sin]["ConcProm"][-1]
+                
+                dif_abs = c_con_final - c_sin_final
+                dif_porc = (dif_abs / c_sin_final) * 100 if c_sin_final > 0 else 0.0
+                
+                efecto_agitacion_datos.append({
+                    "Matriz / Fruta": fruta,
+                    "Conc. Final Con Agit. (g/L)": f"{c_con_final:.2f}",
+                    "Conc. Final Sin Agit. (g/L)": f"{c_sin_final:.2f}",
+                    "Diferencia Absoluta (g/L)": f"{dif_abs:.2f}",
+                    "Efecto Porcentual Agitación (%)": f"{dif_porc:.2f}%"
+                })
+        
+        if len(efecto_agitacion_datos) > 0:
+            st.dataframe(efecto_agitacion_datos, use_container_width=True)
+        else:
+            st.info("💡 Para calcular automáticamente el efecto de la agitación, registra al menos una fruta con ambas condiciones ('Con Agitación' y 'Sin Agitación').")
+
+        st.markdown("---")
+        st.subheader("📊 Comparación Gráfica de Velocidades Promedio")
         if len(tiempo_muestreo) > 1 and len(grupos_seleccionados) > 0:
             num_intervalos = len(tiempo_muestreo) - 1
             x = np.arange(num_intervalos)
@@ -315,7 +354,5 @@ if len(historial) > 0:
             ax_bar.grid(True, axis="y")
             ax_bar.legend()
             st.pyplot(fig_bar)
-        else:
-            st.warning("⚠️ Selecciona al menos un grupo (promedio) en el panel de checkboxes.")
 else:
     st.info("👈 Ingresa los datos de calibración y registra tus réplicas en la barra lateral.")

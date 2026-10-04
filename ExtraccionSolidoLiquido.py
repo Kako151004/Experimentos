@@ -10,7 +10,7 @@ st.set_page_config(
 st.title("🍇 Cinética de Extracción y Curva de Calibrado")
 st.markdown(
     """
-Esta aplicación procesa la curva de calibrado y agrupa automáticamente las réplicas experimentales por tipo de fruta para calcular promedios, desviaciones estándar y velocidades de extracción.
+Esta aplicación procesa la curva de calibrado, administra réplicas experimentales masivas por condición (fruta/agitación) y calcula automáticamente promedios, desviaciones estándar y velocidades.
 """
 )
 
@@ -70,10 +70,10 @@ except Exception as e:
 
 # --- INGRESO DE DATOS EXPERIMENTALES (RÉPLICAS) ---
 st.sidebar.markdown("---")
-st.sidebar.header("🧪 Registro de Réplicas")
-st.sidebar.info("💡 Escribe el nombre base de la muestra (ej: 'Manzana') para agrupar automáticamente sus réplicas.")
+st.sidebar.header("🧪 Ingreso de Réplicas")
+st.sidebar.info("💡 Ej: Nombre de condición: 'Manzana - Con Agitación'. El sistema detectará el número de réplica automáticamente.")
 
-fruta_nombre = st.sidebar.text_input("Nombre de la muestra / Fruta", "Manzana")
+condicion_nombre = st.sidebar.text_input("Condición / Fruta", "Manzana - Con Agitación")
 input_abs_exp = st.sidebar.text_area(
     "ABS experimental (600 nm) (separados por espacio)", "0.05 0.15 0.22 0.28 0.31 0.33"
 )
@@ -104,17 +104,24 @@ if guardar_corrida:
                 else np.zeros_like(concentracion)
             )
 
+            # Contar cuántas réplicas ya existen para este grupo exacto
+            grupo_base = condicion_nombre.strip()
+            replicas_existentes = [item for item in st.session_state.HistorialExtraccion if item["Grupo"] == grupo_base]
+            num_replica = len(replicas_existentes) + 1
+
             # Guardar la corrida individual en el historial
             st.session_state.HistorialExtraccion.append(
                 {
-                    "Grupo": fruta_nombre.strip(),
+                    "Grupo": grupo_base,
+                    "ID_Replica": num_replica,
+                    "EtiquetaCompleta": f"{grupo_base} (R{num_replica})",
                     "ABSExperimental": abs_exp,
                     "Concentracion": concentracion,
                     "MasaAparente": masa_aparente,
                     "ExtraccionRelativa": extraccion_relativa,
                 }
             )
-            st.sidebar.success(f"✅ Réplica guardada bajo el grupo: **{fruta_nombre.strip()}**")
+            st.sidebar.success(f"✅ Guardado: **{grupo_base}** (Réplica #{num_replica})")
     except Exception as e:
         st.sidebar.error(f"Error procesando datos: {e}")
 
@@ -123,62 +130,72 @@ historial = st.session_state.HistorialExtraccion
 
 if len(historial) > 0:
     st.markdown("---")
-    st.subheader(f"📋 Resultados y Análisis Estadístico de Réplicas ({len(historial)} corridas totales)")
+    st.subheader(f"📋 Panel de Resultados y Control ({len(historial)} registros totales)")
 
-    # Obtener nombres de grupos únicos (ej: 'Manzana', 'Pera')
     grupos_unicos = sorted(list(set(item["Grupo"] for item in historial)))
-
-    # Pestañas para cada grupo y comparativas globales
-    tabs = st.tabs([f"🧪 {g}" for g in grupos_unicos] + ["📊 Gráfica Global con Promedios", "⚡ Velocidades Estadísticas"])
-
-    # Diccionario para almacenar los promedios globales por grupo (para usarlos en comparativas)
+    
+    # Precalcular datos estadísticos por grupo
     datos_agrupados = {}
-
-    for idx, grupo in enumerate(grupos_unicos):
-        # Filtrar todas las corridas que pertenecen a este grupo
+    for grupo in grupos_unicos:
         corridas_grupo = [item for item in historial if item["Grupo"] == grupo]
-        
-        # Extraer matrices de concentración para calcular media y desviación estándar
-            # shape: (num_replicas, num_tiempos)
         matriz_conc = np.array([c["Concentracion"] for c in corridas_grupo])
         matriz_masa = np.array([c["MasaAparente"] for c in corridas_grupo])
         matriz_ext = np.array([c["ExtraccionRelativa"] for c in corridas_grupo])
 
-        # Cálculos estadísticos (si hay 1 réplica, SD = 0)
         conc_prom = np.mean(matriz_conc, axis=0)
         conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_prom)
-
         masa_prom = np.mean(matriz_masa, axis=0)
         ext_prom = np.mean(matriz_ext, axis=0)
 
-        # Guardar resumen del grupo
+        tm = np.diff(tiempo_muestreo)
+        c_diff = np.diff(conc_prom)
+        velocidad_promedio_grupo = c_diff / tm if np.all(tm > 0) else np.zeros_like(c_diff)
+
         datos_agrupados[grupo] = {
             "Tiempos": tiempo_muestreo,
             "ConcProm": conc_prom,
             "ConcStd": conc_std,
+            "MasaProm": masa_prom,
+            "ExtProm": ext_prom,
+            "VelocidadPromedio": velocidad_promedio_grupo,
             "Corridas": corridas_grupo
         }
 
-        with tabs[idx]:
-            st.write(f"### Grupo: **{grupo}** ({len(corridas_grupo)} réplica(s) registrada(s))")
+    # Pestañas principales
+    tabs = st.tabs([f"🧪 {g}" for g in grupos_unicos] + ["📊 Tabla Global y Gráficos", "⚡ Velocidades Estadísticas"])
 
-            # Mostrar tabla resumen con Promedio y Desviación Estándar
+    # Pestañas individuales por grupo
+    for idx, grupo in enumerate(grupos_unicos):
+        d = datos_agrupados[grupo]
+        with tabs[idx]:
+            st.write(f"### Condición: **{grupo}** ({len(d['Corridas'])} réplica(s))")
+
+            st.write("#### Resumen Estadístico del Grupo (Promedio ± SD)")
             tabla_resumen = {
                 "Tiempo (min)": tiempo_muestreo,
-                "Conc. Promedio (g/L)": [f"{v:.2f}" for v in conc_prom],
-                "Desv. Estándar (± SD)": [f"{v:.2f}" for v in conc_std],
-                "Masa Aparente Prom. (g)": [f"{v:.2f}" for v in masa_prom],
-                "Extracción Relativa Prom. (%)": [f"{v:.2f}" for v in ext_prom],
+                "Conc. Promedio (g/L)": [f"{v:.2f}" for v in d["ConcProm"]],
+                "Desv. Estándar (± SD)": [f"{v:.2f}" for v in d["ConcStd"]],
+                "Masa Aparente Prom. (g)": [f"{v:.2f}" for v in d["MasaProm"]],
+                "Extracción Relativa Prom. (%)": [f"{v:.2f}" for v in d["ExtProm"]],
             }
             st.dataframe(tabla_resumen, use_container_width=True)
 
-            # Gráfica individual del grupo mostrando las réplicas tenues y la línea de promedio con error
+            st.write("#### Velocidad Promedio de Extracción por Intervalos")
+            if len(tiempo_muestreo) > 1:
+                tabla_2_datos = []
+                for ti, tf, vm in zip(tiempo_muestreo[:-1], tiempo_muestreo[1:], d["VelocidadPromedio"]):
+                    tabla_2_datos.append({
+                        "Intervalo de tiempo (min)": f"{int(ti)} a {int(tf)}",
+                        "Velocidad promedio ((g/L)/min)": f"{vm:.4f}",
+                    })
+                st.dataframe(tabla_2_datos, use_container_width=True)
+
+            # Gráfica individual
             fig_g, ax_g = plt.subplots(figsize=(7, 4))
-            for r_idx, c_item in enumerate(corridas_grupo):
-                ax_g.plot(tiempo_muestreo, c_item["Concentracion"], linestyle="--", alpha=0.4, label=f"Réplica {r_idx+1}")
+            for c_item in d["Corridas"]:
+                ax_g.plot(tiempo_muestreo, c_item["Concentracion"], linestyle="--", alpha=0.4, label=f"R{c_item['ID_Replica']}")
             
-            # Curva promedio con barras de error
-            ax_g.errorbar(tiempo_muestreo, conc_prom, yerr=conc_std, fmt="o-", color="black", linewidth=2, capsize=4, label="Promedio ± SD")
+            ax_g.errorbar(tiempo_muestreo, d["ConcProm"], yerr=d["ConcStd"], fmt="o-", color="black", linewidth=2, capsize=4, label="Promedio ± SD")
             ax_g.set_xlabel("Tiempo (min)")
             ax_g.set_ylabel("Concentración (g/L)")
             ax_g.set_title(f"Cinética con Réplicas: {grupo}")
@@ -186,24 +203,44 @@ if len(historial) > 0:
             ax_g.legend()
             st.pyplot(fig_g)
 
-    # --- PANEL DE SELECCIÓN GLOBAL ---
+    # --- PANEL DE SELECCIÓN CON CHECKBOXES DIVIDIDO (REPLICAS VS PROMEDIOS) ---
     st.markdown("---")
-    st.subheader("🎛️ Selector de Grupos para Gráficos Globales")
-    
-    cols_check = st.columns(min(len(grupos_unicos), 4))
-    grupos_seleccionados = []
-    
-    for idx, grupo in enumerate(grupos_unicos):
-        col_idx = idx % len(cols_check)
-        with cols_check[col_idx]:
-            if st.checkbox(f"Mostrar {grupo}", value=True, key=f"chk_grp_{idx}"):
+    st.subheader("🎛️ Panel de Control de Visualización (Filtros de Masas de Datos)")
+    st.markdown("Dado el alto volumen de datos (réplicas múltiples), selecciona exactamente qué deseas graficar o comparar a continuación:")
+
+    col_chk1, col_chk2 = st.columns(2)
+
+    with col_chk1:
+        st.markdown("##### 🔍 Réplicas Individuales (Opcional)")
+        corridas_seleccionadas = []
+        for item in historial:
+            if st.checkbox(item["EtiquetaCompleta"], value=False, key=f"chk_corrida_{item['EtiquetaCompleta']}"):
+                corridas_seleccionadas.append(item)
+
+    with col_chk2:
+        st.markdown("##### 📊 Promedios de Grupos (Recomendado)")
+        grupos_seleccionados = []
+        for grupo in grupos_unicos:
+            if st.checkbox(f"Promedio: {grupo}", value=True, key=f"chk_grupo_{grupo}"):
                 grupos_seleccionados.append(grupo)
 
-    # Pestaña de Gráfica Global con Promedios
+    # Pestaña de Tabla Global y Gráfica Global
     with tabs[len(grupos_unicos)]:
-        st.subheader("📈 Comparación Global de Promedios (con Barras de Error)")
-        if len(grupos_seleccionados) > 0:
-            fig_glob, ax_glob = plt.subplots(figsize=(8, 5))
+        st.subheader("📋 Tabla Consolidada de Todos los Grupos (Promedios)")
+        # Crear una tabla global resumen
+        tabla_global = {"Tiempo (min)": tiempo_muestreo}
+        for grupo in grupos_unicos:
+            tabla_global[f"{grupo} (Prom. g/L)"] = [f"{v:.2f}" for v in datos_agrupados[grupo]["ConcProm"]]
+            tabla_global[f"{grupo} (± SD)"] = [f"{v:.2f}" for v in datos_agrupados[grupo]["ConcStd"]]
+        st.dataframe(tabla_global, use_container_width=True)
+
+        st.markdown("---")
+        st.subheader("📈 Gráfica Global Comparativa")
+        
+        if len(grupos_seleccionados) > 0 or len(corridas_seleccionadas) > 0:
+            fig_glob, ax_glob = plt.subplots(figsize=(9, 5))
+            
+            # Graficar promedios seleccionados con barras de error
             for grupo in grupos_seleccionados:
                 d = datos_agrupados[grupo]
                 ax_glob.errorbar(
@@ -212,20 +249,34 @@ if len(historial) > 0:
                     yerr=d["ConcStd"],
                     marker="o",
                     capsize=4,
-                    label=grupo,
+                    linewidth=2,
+                    label=f"Promedio: {grupo}",
                 )
+
+            # Graficar réplicas individuales seleccionadas en líneas punteadas sutiles
+            for c_item in corridas_seleccionadas:
+                ax_glob.plot(
+                    tiempo_muestreo,
+                    c_item["Concentracion"],
+                    linestyle=":",
+                    alpha=0.6,
+                    marker="x",
+                    label=f"Réplica: {c_item['EtiquetaCompleta']}"
+                )
+
             ax_glob.set_xlabel("Tiempo (min)")
-            ax_glob.set_ylabel("Concentración Promedio (g/L)")
-            ax_glob.set_title("Comparativa Cinética de Grupos (Promedio ± SD)")
+            ax_glob.set_ylabel("Concentración (g/L)")
+            ax_glob.set_title("Comparativa Global de Cinética de Extracción")
             ax_glob.grid(True)
-            ax_glob.legend()
+            ax_glob.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            plt.tight_layout()
             st.pyplot(fig_glob)
         else:
-            st.warning("⚠️ Selecciona al menos un grupo arriba.")
+            st.warning("⚠️ Selecciona al menos un grupo o réplica en el panel de checkboxes superior.")
 
-    # Pestaña de Velocidades Estadísticas
+    # Pestaña de Velocidades Estadísticas Globales
     with tabs[len(grupos_unicos) + 1]:
-        st.subheader("⚡ Velocidades Promedio de Extracción por Intervalos")
+        st.subheader("⚡ Comparación de Velocidades Promedio por Grupos")
         if len(tiempo_muestreo) > 1 and len(grupos_seleccionados) > 0:
             num_intervalos = len(tiempo_muestreo) - 1
             x = np.arange(num_intervalos)
@@ -234,14 +285,9 @@ if len(historial) > 0:
             fig_bar, ax_bar = plt.subplots(figsize=(9, 5))
             for i, grupo in enumerate(grupos_seleccionados):
                 d = datos_agrupados[grupo]
-                # Calcular velocidad usando el promedio
-                tm = np.diff(d["Tiempos"])
-                c_diff = np.diff(d["ConcProm"])
-                v_prom = c_diff / tm if np.all(tm > 0) else np.zeros_like(c_diff)
-
                 ax_bar.bar(
                     x + (i * ancho),
-                    v_prom,
+                    d["VelocidadPromedio"],
                     width=ancho,
                     label=grupo,
                 )
@@ -252,13 +298,13 @@ if len(historial) > 0:
             ]
             ax_bar.set_xlabel("Intervalos de Tiempo")
             ax_bar.set_ylabel("Velocidad Promedio del Grupo ((g/L) / min)")
-            ax_bar.set_title("Velocidades Promedio de Extracción")
+            ax_bar.set_title("Velocidades Promedio de Extracción por Grupos")
             ax_bar.set_xticks(x + ancho * (len(grupos_seleccionados) - 1) / 2)
             ax_bar.set_xticklabels(labels_intervalos)
             ax_bar.grid(True, axis="y")
             ax_bar.legend()
             st.pyplot(fig_bar)
         else:
-            st.warning("⚠️ Selecciona al menos un grupo arriba y verifica los tiempos.")
+            st.warning("⚠️ Selecciona al menos un grupo (promedio) en el panel de checkboxes.")
 else:
     st.info("👈 Ingresa los datos de calibración y registra tus réplicas en la barra lateral.")

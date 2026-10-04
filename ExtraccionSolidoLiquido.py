@@ -45,12 +45,12 @@ try:
 
     if len(conc_e) != len(abs_e):
         st.error(
-            "⚠️️ La cantidad de valores en Concentración Estándar y ABS Estándar debe ser la misma."
+            "⚠ La cantidad de valores en Concentración Estándar y ABS Estándar debe ser la misma."
         )
     else:
-        # Nota: linregress(x, y). En tu script original pasabas (ABS, Conc) o (Conc, ABS).
-        # Verificando tu script: linregress(ABSEstandar, ConcentracionE) -> x=ABS, y=Conc.
-        m, b, r, _, _ = linregress(abs_e, conc_e)
+        # CORRECCIÓN: X = Concentración, Y = ABS (Estándar en X, Absorbancia en Y)
+        # Esto permite usar la fórmula: Concentración = (ABS - b) / m
+        m, b, r, _, _ = linregress(conc_e, abs_e)
         r2 = r**2
 
         # Mostrar sección de calibración arriba
@@ -62,11 +62,15 @@ try:
             )
 
             fig_cal, ax_cal = plt.subplots(figsize=(6, 3.5))
-            ax_cal.plot(conc_e, abs_e, "bo-", label="Estándares")
+            ax_cal.scatter(conc_e, abs_e, color="blue", label="Estándares")
+            # Línea de tendencia usando la regresión correcta
+            line_x = np.linspace(min(conc_e), max(conc_e), 100)
+            ax_cal.plot(line_x, m * line_x + b, color="red", label=f"Regresión: y = {m:.4f}x + {b:.4f}")
             ax_cal.set_xlabel("Concentración (g/L)")
             ax_cal.set_ylabel("ABS 600 (nm)")
             ax_cal.set_title("Calibración: Concentración vs ABS")
             ax_cal.grid(True)
+            ax_cal.legend()
             st.pyplot(fig_cal)
 
 except Exception as e:
@@ -101,7 +105,7 @@ if guardar_fruta:
                 "⚠️ La cantidad de valores de ABS experimental debe coincidir con la cantidad de Tiempos de muestreo."
             )
         else:
-            # Cálculos principales
+            # Cálculos principales corregidos
             concentracion = (abs_exp - b) / m
             tm = np.diff(tiempo_muestreo)
             c_diff = np.diff(concentracion)
@@ -112,6 +116,12 @@ if guardar_fruta:
                 if concentracion_ref > 0
                 else np.zeros_like(concentracion)
             )
+
+            # Evitar nombres duplicados exactos sumando un identificador numérico si ya existe
+            nombre_base = fruta
+            conteo_existente = sum(1 for item in st.session_state.HistorialExtraccion if item["Fruta"].startswith(nombre_base))
+            if conteo_existente > 0:
+                fruta = f"{nombre_base} ({conteo_existente + 1})"
 
             # Guardar en el historial de sesión
             st.session_state.HistorialExtraccion.append(
@@ -195,36 +205,57 @@ if len(historial) > 0:
             ax_ind.legend()
             st.pyplot(fig_ind)
 
+    # --- PANEL DE SELECCIÓN CON CASILLAS (CHECKBOXES) PARA EVITAR SOLAPAMIENTO ---
+    st.markdown("---")
+    st.subheader("🎛️ Selector de Ensayos para Gráficos Globales")
+    st.markdown("Selecciona con un ticket qué frutas deseas visualizar en las comparativas globales para evitar saturar los gráficos:")
+
+    cols_check = st.columns(min(len(historial), 4))
+    selected_indices = []
+    
+    for idx, item in enumerate(historial):
+        col_idx = idx % len(cols_check)
+        with cols_check[col_idx]:
+            # Por defecto todas seleccionadas
+            if st.checkbox(f"Mostrar {item['Fruta']}", value=True, key=f"chk_global_{idx}"):
+                selected_indices.append(idx)
+
+    # Filtrar historial según selección
+    historial_filtrado = [historial[i] for i in selected_indices]
+
     # Pestaña de Gráfica Global de Concentración
     with tabs[len(historial)]:
         st.subheader("📈 Comparación Global: Concentración vs Tiempo")
-        fig_glob, ax_glob = plt.subplots(figsize=(8, 5))
-        for item in historial:
-            ax_glob.plot(
-                tiempo_muestreo,
-                item["Concentracion"],
-                marker="o",
-                label=item["Fruta"],
-            )
-        ax_glob.set_xlabel("Tiempo (min)")
-        ax_glob.set_ylabel("Concentración (g/L)")
-        ax_glob.set_title("Cinética de Extracción de Azúcares Reductores")
-        ax_glob.grid(True)
-        ax_glob.legend()
-        st.pyplot(fig_glob)
+        if len(historial_filtrado) > 0:
+            fig_glob, ax_glob = plt.subplots(figsize=(8, 5))
+            for item in historial_filtrado:
+                ax_glob.plot(
+                    tiempo_muestreo,
+                    item["Concentracion"],
+                    marker="o",
+                    label=item["Fruta"],
+                )
+            ax_glob.set_xlabel("Tiempo (min)")
+            ax_glob.set_ylabel("Concentración (g/L)")
+            ax_glob.set_title("Cinética de Extracción de Azúcares Reductores")
+            ax_glob.grid(True)
+            ax_glob.legend()
+            st.pyplot(fig_glob)
+        else:
+            st.warning("⚠️ Selecciona al menos una fruta arriba para mostrar el gráfico global.")
 
     # Pestaña de Velocidades Promedio (Gráfico de Barras)
     with tabs[len(historial) + 1]:
         st.subheader(
             "⚡ Comparación de Velocidad Promedio de Extracción por Intervalos"
         )
-        if len(tiempo_muestreo) > 1:
+        if len(tiempo_muestreo) > 1 and len(historial_filtrado) > 0:
             num_intervalos = len(tiempo_muestreo) - 1
             x = np.arange(num_intervalos)
-            ancho = 0.2
+            ancho = min(0.2, 0.8 / max(len(historial_filtrado), 1))
 
             fig_bar, ax_bar = plt.subplots(figsize=(9, 5))
-            for i, item in enumerate(historial):
+            for i, item in enumerate(historial_filtrado):
                 v_prom = item["VelocidadPromedio"]
                 ax_bar.bar(
                     x + (i * ancho),
@@ -240,11 +271,13 @@ if len(historial) > 0:
             ax_bar.set_xlabel("Intervalos de Tiempo")
             ax_bar.set_ylabel("Velocidad Promedio ((g/L) / min)")
             ax_bar.set_title("Velocidad Promedio de Extracción por Intervalos")
-            ax_bar.set_xticks(x + ancho * (len(historial) - 1) / 2)
+            ax_bar.set_xticks(x + ancho * (len(historial_filtrado) - 1) / 2)
             ax_bar.set_xticklabels(labels_intervalos)
             ax_bar.grid(True, axis="y")
             ax_bar.legend()
             st.pyplot(fig_bar)
+        else:
+            st.warning("⚠️ Selecciona al menos una fruta arriba (y asegúrate de tener más de un tiempo) para mostrar el gráfico de barras.")
 else:
     st.info(
         "👈 Ingresa los parámetros de calibración y registra al menos una fruta en la barra lateral para ver los resultados y gráficos."

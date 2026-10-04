@@ -1,251 +1,172 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
 from scipy.stats import linregress
 
-st.set_page_config(
-    page_title="Cinética de Extracción Sólido-Líquido", page_icon="🍇", layout="wide"
-)
+# Configuración de la página
+st.set_page_config(page_title="Cinética de Extracción / Diálisis", page_icon="🧪", layout="wide")
 
-st.title("🍇 Cinética de Extracción y Curva de Calibrado")
-st.markdown(
-    """
-Esta aplicación permite procesar la curva de calibrado espectrofotométrico y analizar las corridas experimentales de extracción sólido-líquido para diferentes tipos de fruta, calculando concentraciones, masa aparente, extracción relativa y velocidades promedio de extracción.
-"""
-)
+st.title("🧪 Simulador y Analizador: Cinética de Transferencia de Masa")
+st.write("Herramienta interactiva para el procesamiento de datos experimentales.")
 
-# --- INICIALIZAR HISTORIAL EN LA SESIÓN ---
-if "HistorialExtraccion" not in st.session_state:
-    st.session_state.HistorialExtraccion = []
+# --- BARRA LATERAL: PARÁMETROS Y CALIBRACIÓN ---
+st.sidebar.header("1. Parámetros del Sistema")
+volumen = st.sidebar.number_input("Volumen del medio externo (mL):", value=120.0, step=10.0)
+masa = st.sidebar.number_input("Masa de matriz vegetal (g):", value=12.0, step=1.0)
 
-# --- PARÁMETROS GENERALES Y CALIBRACIÓN ---
-st.sidebar.header("⚙️ Parámetros Generales y Calibración")
-
-volumen_agua = st.sidebar.number_input(
-    "Volumen de agua (L)", value=1.00, format="%.3f"
+tiempos_input = st.sidebar.text_input(
+    "Tiempos de muestreo (separados por espacios):", 
+    value="0 5 10 15 20 30 45 60"
 )
-input_tiempos = st.sidebar.text_area(
-    "Tiempos de muestreo (min) (separados por espacio)", "0 5 10 15 20 30"
-)
-
-st.sidebar.markdown("---")
-st.sidebar.subheader("📈 Datos de Calibrado")
-input_conc_e = st.sidebar.text_area(
-    "Concentración estándar (g/L)", "0.0 0.5 1.0 1.5 2.0"
-)
-input_abs_e = st.sidebar.text_area(
-    "ABS estándar (600 nm)", "0.00 0.12 0.25 0.38 0.50"
-)
-
-# Procesar Calibración de forma dinámica
 try:
-    tiempo_muestreo = np.array([float(x) for x in input_tiempos.split()])
-    conc_e = np.array([float(x) for x in input_conc_e.split()])
-    abs_e = np.array([float(x) for x in input_abs_e.split()])
+    tiempo = np.array([float(x) for x in tiempos_input.split()])
+except ValueError:
+    st.sidebar.error("Por favor, ingresa los tiempos correctamente separados por espacios.")
+    tiempo = np.array([])
 
-    if len(conc_e) != len(abs_e):
-        st.error(
-            "⚠️️ La cantidad de valores en Concentración Estándar y ABS Estándar debe ser la misma."
-        )
-    else:
-        # Nota: linregress(x, y). En tu script original pasabas (ABS, Conc) o (Conc, ABS).
-        # Verificando tu script: linregress(ABSEstandar, ConcentracionE) -> x=ABS, y=Conc.
-        m, b, r, _, _ = linregress(abs_e, conc_e)
-        r2 = r**2
-
-        # Mostrar sección de calibración arriba
-        col_cal1, col_cal2 = st.columns([1, 1])
-        with col_cal1:
-            st.subheader("📊 Curva de Calibrado Espectrofotométrico")
-            st.write(
-                f"- **Pendiente ($m$):** `{m:.4f}` | **Intercepto ($b$):** `{b:.4f}` | **R²:** `{r2:.4f}`"
-            )
-
-            fig_cal, ax_cal = plt.subplots(figsize=(6, 3.5))
-            ax_cal.plot(conc_e, abs_e, "bo-", label="Estándares")
-            ax_cal.set_xlabel("Concentración (g/L)")
-            ax_cal.set_ylabel("ABS 600 (nm)")
-            ax_cal.set_title("Calibración: Concentración vs ABS")
-            ax_cal.grid(True)
-            st.pyplot(fig_cal)
-
-except Exception as e:
-    st.error(f"Error en los datos de calibración: {e}")
-
-# --- INGRESO DE DATOS EXPERIMENTALES (POR CADA FRUTA) ---
-st.sidebar.markdown("---")
-st.sidebar.header("🧪 Registro Experimental por Fruta")
-
-fruta = st.sidebar.text_input("Tipo de fruta", "Manzana")
-input_abs_exp = st.sidebar.text_area(
-    "ABS experimental (600 nm) (separados por espacio)", "0.05 0.15 0.22 0.28 0.31 0.33"
+st.sidebar.header("2. Curva de Calibrado")
+conc_e_input = st.sidebar.text_input(
+    "Concentraciones estándar (g/L):", 
+    value="0.2 0.4 0.6 0.8 1.0 1.2 1.4"
 )
-concentracion_ref = st.sidebar.number_input(
-    "Concentración de referencia (g/L)", value=2.50, format="%.2f"
+abs_e_input = st.sidebar.text_input(
+    "Absorbancias estándar correspondientes:", 
+    value="0.118 0.218 0.308 0.410 0.512 0.660 0.755"
 )
 
-col_b1, col_b2 = st.sidebar.columns(2)
-guardar_fruta = col_b1.button("💾 Guardar Fruta")
-limpiar_historial = col_b2.button("🗑️ Limpiar Todo")
+try:
+    concentracion_e = np.array([float(x) for x in conc_e_input.split()])
+    abs_estandars = np.array([float(x) for x in abs_e_input.split()])
+    
+    # CORRECCIÓN: Datos invertidos para la regresión (Eje X = Absorbancia, Eje Y = Concentración)
+    # De esta forma: C = m * Abs + b
+    m, b, r, _, _ = linregress(abs_estandars, concentracion_e)
+    r2 = r**2
+except Exception:
+    st.sidebar.error("Error en el formato de los datos estándar. Verifica que sean solo números.")
+    m, b, r2 = 1.0, 0.0, 0.0
 
-if limpiar_historial:
-    st.session_state.HistorialExtraccion = []
-    st.success("Historial de extracciones reiniciado.")
+# --- PANEL PRINCIPAL: MOSTRAR CURVA DE CALIBRADO ---
+col1, col2 = st.columns([1, 1])
 
-if guardar_fruta:
-    try:
-        abs_exp = np.array([float(x) for x in input_abs_exp.split()])
+with col1:
+    st.subheader("📊 Curva de Calibrado")
+    fig_cal, ax_cal = plt.subplots(figsize=(6, 4))
+    ax_cal.scatter(abs_estandars, concentracion_e, color='blue', label='Datos Estándar')
+    ax_cal.plot(abs_estandars, m * abs_estandars + b, color='red', label=f'Regresión: C = {m:.4f}(ABS) + {b:.4f}')
+    ax_cal.set_xlabel('Absorbancia (600 nm)')
+    ax_cal.set_ylabel('Concentración (g/L)')
+    ax_cal.set_title('Curva de Calibrado')
+    ax_cal.grid(True)
+    ax_cal.legend()
+    st.pyplot(fig_cal)
 
-        if len(abs_exp) != len(tiempo_muestreo):
-            st.sidebar.error(
-                "⚠️ La cantidad de valores de ABS experimental debe coincidir con la cantidad de Tiempos de muestreo."
-            )
+with col2:
+    st.subheader("📈 Parámetros de la Recta")
+    st.metric(label="Pendiente (m)", value=f"{m:.4f}")
+    st.metric(label="Intercepto (b)", value=f"{b:.4f}")
+    st.metric(label="Coeficiente de Correlación (R²)", value=f"{r2:.4f}")
+    st.info("Fórmula de interpolación directa: $C = m \\cdot \\text{ABS} + b$")
+
+st.markdown("---")
+
+# --- BLOQUE EXPERIMENTAL ---
+if 'historial' not in st.session_state:
+    st.session_state['historial'] = []
+
+st.subheader("🔬 Registro de Datos Experimentales")
+
+with st.form(key="experimental_form"):
+    c_cond1, c_cond2 = st.columns(2)
+    with c_cond1:
+        tipo_agitacion = st.radio("Condición del ensayo:", ("Con agitación", "Sin agitación"))
+    with c_cond2:
+        rpm = 0
+        if tipo_agitacion == "Con agitación":
+            rpm = st.number_input("Revoluciones por minuto (RPM):", value=100.0, step=10.0)
+            etiqueta_rpm = f"Agitación {rpm} RPM"
         else:
-            # Cálculos principales
-            concentracion = (abs_exp - b) / m
-            tm = np.diff(tiempo_muestreo)
-            c_diff = np.diff(concentracion)
-            masa_aparente = concentracion * volumen_agua
-            velocidad_promedio = c_diff / tm if np.all(tm > 0) else np.zeros_like(c_diff)
-            extraccion_relativa = (
-                (concentracion / concentracion_ref) * 100
-                if concentracion_ref > 0
-                else np.zeros_like(concentracion)
-            )
+            etiqueta_rpm = "Estático (0 RPM)"
 
-            # Guardar en el historial de sesión
-            st.session_state.HistorialExtraccion.append(
-                {
-                    "Fruta": fruta,
-                    "ABSExperimental": abs_exp,
-                    "Concentracion": concentracion,
-                    "MasaAparente": masa_aparente,
-                    "ExtraccionRelativa": extraccion_relativa,
-                    "VelocidadPromedio": velocidad_promedio,
-                }
-            )
-            st.sidebar.success(
-                f"✅ Datos para **{fruta}** guardados correctamente."
-            )
-    except Exception as e:
-        st.sidebar.error(f"Error procesando datos experimentales: {e}")
+    abs_exp_input = st.text_input(
+        "Absorbancias experimentales (separadas por espacios):",
+        value="0.020 0.103 0.146 0.271 0.275 0.418 0.533 0.688"
+    )
+    
+    submit_button = st.form_submit_button(label="Registrar y Calcular Ensayo")
 
-# --- MOSTRAR RESULTADOS Y COMPARATIVAS GLOBALES ---
-historial = st.session_state.HistorialExtraccion
+if submit_button:
+    try:
+        abs_experimental = np.array([float(x) for x in abs_exp_input.split()])
+        if len(abs_experimental) != len(tiempo):
+            st.error(f"La cantidad de absorbancias ({len(abs_experimental)}) no coincide con los tiempos ({len(tiempo)}).")
+        else:
+            # Cálculo directo con la recta corregida: C = m * ABS + b
+            concentracion_exp = m * abs_experimental + b
+            
+            # Evitar nombres duplicados exactos en el historial sumando un índice
+            id_ensayo = f"{etiqueta_rpm} (#{len(st.session_state['historial']) + 1})"
+            
+            st.session_state['historial'].append({
+                'ID': id_ensayo,
+                'Tiempo': tiempo,
+                'Abs': abs_experimental,
+                'Conc': concentracion_exp
+            })
+            st.success(f"¡Ensayo '{id_ensayo}' registrado con éxito!")
+    except ValueError:
+        st.error("Asegúrate de ingresar valores numéricos válidos.")
 
-if len(historial) > 0:
+# --- VISUALIZACIÓN DE RESULTADOS Y FILTRADO CON CHECKBOXES ---
+if len(st.session_state['historial']) > 0:
     st.markdown("---")
-    st.subheader(
-        f"📋 Resultados y Tablas Experimentales ({len(historial)} muestras registradas)"
-    )
+    st.subheader("📋 Resultados Almacenados y Gráfica Comparativa")
+    
+    # Botón para limpiar historial
+    if st.button("Limpiar Historial de Ensayos"):
+        st.session_state['historial'] = []
+        st.rerun()
 
-    # Pestañas para cada fruta individual y comparativas globales
-    nombres_frutas = [item["Fruta"] for item in historial]
-    tabs = st.tabs(
-        [f"🍎 {f}" for f in nombres_frutas]
-        + ["📊 Gráfica Global Concentración", "⚡ Velocidades Promedio"]
-    )
+    # Panel de selección lateral o superior para elegir qué ensayos mostrar (evita el solapamiento)
+    st.markdown("##### 🎛️ Selecciona los ensayos que deseas visualizar en el gráfico:")
+    
+    selected_trials = []
+    cols_check = st.columns(min(len(st.session_state['historial']), 4))
+    
+    for idx, item in enumerate(st.session_state['historial']):
+        col_idx = idx % len(cols_check)
+        with cols_check[col_idx]:
+            # Por defecto marcamos todos o dejamos que el usuario elija
+            is_checked = st.checkbox(item['ID'], value=True, key=f"check_{idx}")
+            if is_checked:
+                selected_trials.append(item)
 
-    # Pestañas individuales para cada fruta
-    for idx, item in enumerate(historial):
-        with tabs[idx]:
-            st.write(f"### Registro Experimental para: **{item['Fruta']}**")
-
-            # Tabla 1: Datos experimentales y transformados
-            tabla_1 = {
-                "Tiempo (min)": tiempo_muestreo,
-                "ABS 600 nm": item["ABSExperimental"],
-                "Concentración (g/L)": [f"{val:.2f}" for val in item["Concentracion"]],
-                "Masa Aparente (g)": [f"{val:.2f}" for val in item["MasaAparente"]],
-                "Extracción Relativa (%)": [
-                    f"{val:.2f}" for val in item["ExtraccionRelativa"]
-                ],
+    # Gráfico comparativo solo con los ensayos tildados
+    if len(selected_trials) > 0:
+        fig_comp, ax_comp = plt.subplots(figsize=(8, 5))
+        
+        for item in selected_trials:
+            t_vals = item['Tiempo']
+            c_vals = item['Conc']
+            
+            # Mostrar tabla individual por cada ensayo seleccionado
+            st.write(f"**Ensayo: {item['ID']}**")
+            tabla_datos = {
+                "Tiempo (min)": t_vals,
+                "ABS 600 nm": item['Abs'],
+                "Concentración (g/L)": c_vals
             }
-            st.dataframe(tabla_1, use_container_width=True)
+            st.dataframe(tabla_datos)
+            
+            # Trazar en el gráfico global
+            ax_comp.plot(t_vals, c_vals, marker='o', linewidth=2, label=item['ID'])
 
-            st.write("### Tabla 2: Velocidad Promedio de Extracción")
-            if len(tiempo_muestreo) > 1:
-                tabla_2_datos = []
-                for ti, tf, vm in zip(
-                    tiempo_muestreo[:-1],
-                    tiempo_muestreo[1:],
-                    item["VelocidadPromedio"],
-                ):
-                    tabla_2_datos.append(
-                        {
-                            "Intervalo de tiempo (min)": f"{int(ti)} a {int(tf)}",
-                            "Velocidad promedio ((g/L)/min)": f"{vm:.4f}",
-                        }
-                    )
-                st.dataframe(tabla_2_datos, use_container_width=True)
-
-            # Gráfica individual de concentración vs tiempo
-            fig_ind, ax_ind = plt.subplots(figsize=(7, 4))
-            ax_ind.plot(
-                tiempo_muestreo,
-                item["Concentracion"],
-                marker="o",
-                color="green",
-                label=item["Fruta"],
-            )
-            ax_ind.set_xlabel("Tiempo (min)")
-            ax_ind.set_ylabel("Concentración (g/L)")
-            ax_ind.set_title(f"Concentración vs Tiempo ({item['Fruta']})")
-            ax_ind.grid(True)
-            ax_ind.legend()
-            st.pyplot(fig_ind)
-
-    # Pestaña de Gráfica Global de Concentración
-    with tabs[len(historial)]:
-        st.subheader("📈 Comparación Global: Concentración vs Tiempo")
-        fig_glob, ax_glob = plt.subplots(figsize=(8, 5))
-        for item in historial:
-            ax_glob.plot(
-                tiempo_muestreo,
-                item["Concentracion"],
-                marker="o",
-                label=item["Fruta"],
-            )
-        ax_glob.set_xlabel("Tiempo (min)")
-        ax_glob.set_ylabel("Concentración (g/L)")
-        ax_glob.set_title("Cinética de Extracción de Azúcares Reductores")
-        ax_glob.grid(True)
-        ax_glob.legend()
-        st.pyplot(fig_glob)
-
-    # Pestaña de Velocidades Promedio (Gráfico de Barras)
-    with tabs[len(historial) + 1]:
-        st.subheader(
-            "⚡ Comparación de Velocidad Promedio de Extracción por Intervalos"
-        )
-        if len(tiempo_muestreo) > 1:
-            num_intervalos = len(tiempo_muestreo) - 1
-            x = np.arange(num_intervalos)
-            ancho = 0.2
-
-            fig_bar, ax_bar = plt.subplots(figsize=(9, 5))
-            for i, item in enumerate(historial):
-                v_prom = item["VelocidadPromedio"]
-                ax_bar.bar(
-                    x + (i * ancho),
-                    v_prom,
-                    width=ancho,
-                    label=item["Fruta"],
-                )
-
-            labels_intervalos = [
-                f"{int(tiempo_muestreo[j])}-{int(tiempo_muestreo[j+1])} min"
-                for j in range(num_intervalos)
-            ]
-            ax_bar.set_xlabel("Intervalos de Tiempo")
-            ax_bar.set_ylabel("Velocidad Promedio ((g/L) / min)")
-            ax_bar.set_title("Velocidad Promedio de Extracción por Intervalos")
-            ax_bar.set_xticks(x + ancho * (len(historial) - 1) / 2)
-            ax_bar.set_xticklabels(labels_intervalos)
-            ax_bar.grid(True, axis="y")
-            ax_bar.legend()
-            st.pyplot(fig_bar)
-else:
-    st.info(
-        "👈 Ingresa los parámetros de calibración y registra al menos una fruta en la barra lateral para ver los resultados y gráficos."
-    )
+        ax_comp.set_xlabel("Tiempo (min)")
+        ax_comp.set_ylabel("Concentración de soluto (g/L)")
+        ax_comp.set_title("Cinética Comparativa de Extracción")
+        ax_comp.grid(True)
+        ax_comp.legend()
+        
+        st.pyplot(fig_comp)
+    else:
+        st.warning("Selecciona al menos un ensayo arriba para mostrar el gráfico y las tablas.")

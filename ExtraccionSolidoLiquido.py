@@ -9,7 +9,7 @@ st.set_page_config(
     page_title="Cinética de Extracción Sólido-Líquido", page_icon="🍇", layout="wide"
 )
 
-# --- FUNCIÓN PARA GENERAR EL PDF COMPLETO (Definida a nivel global) ---
+# --- FUNCIÓN PARA GENERAR EL PDF COMPLETO (Incluye Gráfica de Barras de Velocidades) ---
 def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos, tiempo_muestreo):
     pdf = FPDF()
     pdf.add_page()
@@ -53,7 +53,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
             pdf.cell(24, 5, f"{d['RendProm'][i]:.2f}%", 1, 1, "C")
         pdf.ln(3)
 
-    # 3. Velocidades Promedio por Intervalos
+    # 3. Velocidades Promedio por Intervalos y Gráfico de Barras
     if len(tiempo_muestreo) > 1:
         pdf.add_page()
         pdf.set_font("Arial", "B", 10)
@@ -70,7 +70,45 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
             for ti, tf, vm in zip(tiempo_muestreo[:-1], tiempo_muestreo[1:], d["VelocidadPromedio"]):
                 pdf.cell(50, 5, f"{int(ti)} a {int(tf)}", 1, 0, "C")
                 pdf.cell(70, 5, f"{vm:.4f}", 1, 1, "C")
-            pdf.ln(3)
+            pdf.ln(2)
+
+        # Gráfico de barras de velocidades
+        pdf.ln(2)
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(0, 6, "Grafico de Velocidades Promedio:", ln=True)
+        pdf.ln(1)
+
+        num_intervalos = len(tiempo_muestreo) - 1
+        x = np.arange(num_intervalos)
+        ancho = min(0.2, 0.8 / max(len(datos_agrupados), 1))
+
+        fig_bar_temp, ax_bar_temp = plt.subplots(figsize=(7, 3.5))
+        for i, (grupo, d) in enumerate(datos_agrupados.items()):
+            ax_bar_temp.bar(
+                x + (i * ancho),
+                d["VelocidadPromedio"],
+                width=ancho,
+                label=grupo,
+            )
+
+        labels_intervalos = [
+            f"{int(tiempo_muestreo[j])}-{int(tiempo_muestreo[j+1])}m"
+            for j in range(num_intervalos)
+        ]
+        ax_bar_temp.set_xlabel("Intervalos de Tiempo")
+        ax_bar_temp.set_ylabel("Velocidad ((g/L)/min)")
+        ax_bar_temp.set_title("Velocidades Promedio de Extraccion")
+        ax_bar_temp.set_xticks(x + ancho * (len(datos_agrupados) - 1) / 2)
+        ax_bar_temp.set_xticklabels(labels_intervalos, fontsize=8)
+        ax_bar_temp.grid(True, axis="y")
+        ax_bar_temp.legend(fontsize=7)
+        
+        img_bar_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        plt.savefig(img_bar_tmp.name, bbox_inches="tight", dpi=150)
+        plt.close(fig_bar_temp)
+        
+        pdf.image(img_bar_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
+        pdf.ln(5)
         
     # 4. Análisis de Efecto de Agitación (si existe)
     if len(efecto_agitacion_datos) > 0:
@@ -140,7 +178,7 @@ if "ListaCondiciones" not in st.session_state:
     ]
 
 # --- PARÁMETROS GENERALES Y CALIBRACIÓN ---
-st.sidebar.header("⚙️ Parámetros Generales y Calibración")
+st.sidebar.header("⚙️️ Parámetros Generales y Calibración")
 
 volumen_agua = st.sidebar.number_input(
     "Volumen de agua (L)", value=1.00, format="%.3f"

@@ -9,8 +9,8 @@ st.set_page_config(
     page_title="Cinética de Extracción Sólido-Líquido", page_icon="🍇", layout="wide"
 )
 
-# --- FUNCIÓN PARA GENERAR EL PDF COMPLETO (Incluye Gráfica de Barras de Velocidades) ---
-def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos, tiempo_muestreo):
+# --- FUNCIÓN PARA GENERAR EL PDF COMPLETO (Incluye Nuevas Gráficas) ---
+def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos, tiempo_muestreo, frutas_base):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 14)
@@ -110,7 +110,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
         pdf.image(img_bar_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
         pdf.ln(5)
         
-    # 4. Análisis de Efecto de Agitación (si existe)
+    # 4. Análisis de Efecto de Agitación (Tabla y Gráfico Dinámico vs Tiempo)
     if len(efecto_agitacion_datos) > 0:
         pdf.add_page()
         pdf.set_font("Arial", "B", 10)
@@ -132,10 +132,61 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
             pdf.cell(30, 5, f"{ef['Efecto Porcentual Agitación (%)']}", 1, 1, "C")
         pdf.ln(4)
 
-    # 5. Incluir Gráfica Global en el PDF
+        # Gráfico: Efecto Porcentual de Agitación (%) vs Tiempo
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(0, 6, "Efecto Porcentual de Agitacion (%) vs Tiempo:", ln=True)
+        pdf.ln(1)
+
+        fig_ef_temp, ax_ef_temp = plt.subplots(figsize=(7, 3.5))
+        for fruta in frutas_base:
+            cond_con = f"{fruta} - Con Agitación"
+            cond_sin = f"{fruta} - Sin Agitación"
+            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
+                c_con = datos_agrupados[cond_con]["ConcProm"]
+                c_sin = datos_agrupados[cond_sin]["ConcProm"]
+                # Evitar división por cero
+                efecto_t = np.where(c_sin > 0, ((c_con - c_sin) / c_sin) * 100, 0.0)
+                ax_ef_temp.plot(tiempo_muestreo, efecto_t, marker="o", label=fruta)
+
+        ax_ef_temp.set_xlabel("Tiempo (min)")
+        ax_ef_temp.set_ylabel("Efecto de Agitación (%)")
+        ax_ef_temp.set_title("Evolución Temporal del Efecto de Agitación")
+        ax_ef_temp.grid(True)
+        ax_ef_temp.legend(fontsize=7)
+
+        img_ef_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        plt.savefig(img_ef_tmp.name, bbox_inches="tight", dpi=150)
+        plt.close(fig_ef_temp)
+
+        pdf.image(img_ef_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
+        pdf.ln(5)
+
+    # 5. Gráfico de Extracción Relativa Corregida (Erel %) vs Tiempo
     pdf.add_page()
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 6, "5. Grafica Comparativa Global:", ln=True)
+    pdf.cell(0, 6, "5. Extraccion Relativa Corregida (Erel %) vs Tiempo:", ln=True)
+    pdf.ln(2)
+
+    fig_er_temp, ax_er_temp = plt.subplots(figsize=(7, 3.8))
+    for grupo, d in datos_agrupados.items():
+        ax_er_temp.plot(tiempo_muestreo, d["ExtProm"], marker="o", label=grupo)
+    ax_er_temp.set_xlabel("Tiempo (min)")
+    ax_er_temp.set_ylabel("Extracción Relativa Corregida Erel (%)")
+    ax_er_temp.set_title("Cinética de Extracción Relativa Normalizada")
+    ax_er_temp.grid(True)
+    ax_er_temp.legend(fontsize=7, bbox_to_anchor=(1.05, 1), loc='upper left')
+
+    img_er_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    plt.savefig(img_er_tmp.name, bbox_inches="tight", dpi=150)
+    plt.close(fig_er_temp)
+
+    pdf.image(img_er_tmp.name, x=15, y=pdf.get_y() + 2, w=170)
+    pdf.ln(5)
+
+    # 6. Incluir Gráfica Global en el PDF
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 6, "6. Grafica Comparativa Global:", ln=True)
     pdf.ln(2)
     
     fig_temp, ax_temp = plt.subplots(figsize=(7, 4))
@@ -145,7 +196,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
     ax_temp.set_ylabel("Concentracion (g/L)")
     ax_temp.set_title("Cinetica de Extraccion Global")
     ax_temp.grid(True)
-    ax_temp.legend(fontsize=8)
+    ax_temp.legend(fontsize=7)
     
     img_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     plt.savefig(img_tmp.name, bbox_inches="tight", dpi=150)
@@ -178,7 +229,7 @@ if "ListaCondiciones" not in st.session_state:
     ]
 
 # --- PARÁMETROS GENERALES Y CALIBRACIÓN ---
-st.sidebar.header("⚙️️ Parámetros Generales y Calibración")
+st.sidebar.header("⚙ Parámetros Generales y Calibración")
 
 volumen_agua = st.sidebar.number_input(
     "Volumen de agua (L)", value=1.00, format="%.3f"
@@ -300,6 +351,7 @@ if len(historial) > 0:
     st.subheader(f"📋 Panel de Resultados y Control ({len(historial)} registros totales)")
 
     grupos_unicos = sorted(list(set(item["Grupo"] for item in historial)))
+    frutas_base = sorted(list(set([g.split(" - ")[0] for g in grupos_unicos if " - " in g])))
     
     datos_agrupados = {}
     for grupo in grupos_unicos:
@@ -337,7 +389,6 @@ if len(historial) > 0:
     st.sidebar.markdown("---")
     st.sidebar.subheader("📄 Descarga de Informe")
     try:
-        frutas_base = set([g.split(" - ")[0] for g in grupos_unicos if " - " in g])
         efecto_agitacion_datos_pdf = []
         for fruta in frutas_base:
             cond_con = f"{fruta} - Con Agitación"
@@ -356,7 +407,7 @@ if len(historial) > 0:
                 })
 
         ruta_pdf = generar_pdf_informe(
-            datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos_pdf, tiempo_muestreo
+            datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos_pdf, tiempo_muestreo, frutas_base
         )
         with open(ruta_pdf, "rb") as archivo_pdf:
             st.sidebar.download_button(
@@ -369,7 +420,7 @@ if len(historial) > 0:
     except Exception as e:
         st.sidebar.error(f"Error generando PDF: {e}")
 
-    tabs = st.tabs([f"🧪 {g}" for g in grupos_unicos] + ["📊 Tabla Global y Gráficos", "⚡ Velocidades & Efecto Agitación"])
+    tabs = st.tabs([f"🧪 {g}" for g in grupos_unicos] + ["📊 Tabla Global y Gráficos", "⚡ Velocidades & Efecto Agitación", "📈 Extracción Relativa (Erel)"])
 
     for idx, grupo in enumerate(grupos_unicos):
         d = datos_agrupados[grupo]
@@ -476,13 +527,11 @@ if len(historial) > 0:
         else:
             st.warning("⚠️ Selecciona al menos un grupo o réplica en el panel superior.")
 
-    # Pestaña de Velocidades y Efecto de Agitación
+    # Pestaña de Velocidades y Efecto de Agitación (Incluye Gráfico de Efecto % vs Tiempo)
     with tabs[len(grupos_unicos) + 1]:
-        st.subheader("⚡ Análisis de Efecto de Agitación (Diferencia Absoluta y Porcentual)")
+        st.subheader("⚡ Análisis de Efecto de Agitación")
         
-        frutas_base = set([g.split(" - ")[0] for g in grupos_unicos if " - " in g])
         efecto_agitacion_datos = []
-        
         for fruta in frutas_base:
             cond_con = f"{fruta} - Con Agitación"
             cond_sin = f"{fruta} - Sin Agitación"
@@ -506,6 +555,31 @@ if len(historial) > 0:
             st.dataframe(efecto_agitacion_datos, use_container_width=True)
         else:
             st.info("💡 Para calcular automáticamente el efecto de la agitación, registra al menos una fruta con ambas condiciones.")
+
+        st.markdown("---")
+        st.subheader("📈 Evolución Temporal del Efecto Porcentual de Agitación (%) vs Tiempo")
+        if len(frutas_base) > 0:
+            fig_ef, ax_ef = plt.subplots(figsize=(9, 4.5))
+            hay_curvas_ef = False
+            for fruta in frutas_base:
+                cond_con = f"{fruta} - Con Agitación"
+                cond_sin = f"{fruta} - Sin Agitación"
+                if cond_con in datos_agrupados and cond_sin in datos_agrupados:
+                    c_con = datos_agrupados[cond_con]["ConcProm"]
+                    c_sin = datos_agrupados[cond_sin]["ConcProm"]
+                    efecto_t = np.where(c_sin > 0, ((c_con - c_sin) / c_sin) * 100, 0.0)
+                    ax_ef.plot(tiempo_muestreo, efecto_t, marker="o", linewidth=2, label=fruta)
+                    hay_curvas_ef = True
+
+            if hay_curvas_ef:
+                ax_ef.set_xlabel("Tiempo (min)")
+                ax_ef.set_ylabel("Efecto de Agitación (%)")
+                ax_ef.set_title("Efecto Porcentual de Agitación a lo largo del Tiempo")
+                ax_ef.grid(True)
+                ax_ef.legend()
+                st.pyplot(fig_ef)
+            else:
+                st.info("💡 Registra parejas completas (Con y Sin agitación para una misma fruta) para trazar esta gráfica.")
 
         st.markdown("---")
         st.subheader("📊 Comparación Gráfica de Velocidades Promedio")
@@ -536,5 +610,26 @@ if len(historial) > 0:
             ax_bar.grid(True, axis="y")
             ax_bar.legend()
             st.pyplot(fig_bar)
+
+    # Pestaña de Extracción Relativa Corregida (Erel %) vs Tiempo
+    with tabs[len(grupos_unicos) + 2]:
+        st.subheader("📈 Extracción Relativa Corregida Erel (%) vs Tiempo")
+        st.markdown("Esta gráfica muestra la fracción normalizada de soluto extraído respecto al valor final para cada condición experimental.")
+        
+        if len(grupos_seleccionados) > 0:
+            fig_er, ax_er = plt.subplots(figsize=(9, 5))
+            for grupo in grupos_seleccionados:
+                d = datos_agrupados[grupo]
+                ax_er.plot(tiempo_muestreo, d["ExtProm"], marker="o", linewidth=2, label=grupo)
+            
+            ax_er.set_xlabel("Tiempo (min)")
+            ax_er.set_ylabel("Extracción Relativa Corregida Erel (%)")
+            ax_er.set_title("Cinética de Extracción Relativa Normalizada")
+            ax_er.grid(True)
+            ax_er.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            plt.tight_layout()
+            st.pyplot(fig_er)
+        else:
+            st.warning("⚠️ Selecciona al menos un grupo en el panel superior para visualizar su extracción relativa.")
 else:
     st.info("👈 Ingresa los datos de calibración y registra tus réplicas en la barra lateral para generar el informe PDF.")

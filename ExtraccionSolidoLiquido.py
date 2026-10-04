@@ -10,13 +10,22 @@ st.set_page_config(
 st.title("🍇 Cinética de Extracción y Curva de Calibrado")
 st.markdown(
     """
-Esta aplicación procesa la curva de calibrado, administra réplicas experimentales masivas por condición (fruta/agitación) y calcula automáticamente promedios, desviaciones estándar y velocidades.
+Esta aplicación procesa la curva de calibrado, administra réplicas experimentales sin errores de tipeo y calcula automáticamente promedios y desviaciones estándar.
 """
 )
 
-# --- INICIALIZAR HISTORIAL EN LA SESIÓN ---
+# --- INICIALIZAR ESTADOS EN LA SESIÓN ---
 if "HistorialExtraccion" not in st.session_state:
     st.session_state.HistorialExtraccion = []
+
+if "ListaCondiciones" not in st.session_state:
+    # Lista inicial basada en tus 4 frutas con y sin agitación para evitar tipeo manual
+    st.session_state.ListaCondiciones = [
+        "Manzana - Con Agitación", "Manzana - Sin Agitación",
+        "Pera - Con Agitación", "Pera - Sin Agitación",
+        "Plátano - Con Agitación", "Plátano - Sin Agitación",
+        "Naranja - Con Agitación", "Naranja - Sin Agitación"
+    ]
 
 # --- PARÁMETROS GENERALES Y CALIBRACIÓN ---
 st.sidebar.header("⚙️ Parámetros Generales y Calibración")
@@ -68,12 +77,22 @@ try:
 except Exception as e:
     st.error(f"Error en los datos de calibración: {e}")
 
-# --- INGRESO DE DATOS EXPERIMENTALES (RÉPLICAS) ---
+# --- INGRESO DE DATOS EXPERIMENTALES (RÉPLICAS CON SELECTOR ANTITIEMPO) ---
 st.sidebar.markdown("---")
 st.sidebar.header("🧪 Ingreso de Réplicas")
-st.sidebar.info("💡 Ej: Nombre de condición: 'Manzana - Con Agitación'. El sistema detectará el número de réplica automáticamente.")
+st.sidebar.info("💡 Selecciona la condición para evitar errores de tipeo y agrupar automáticamente las 3 réplicas.")
 
-condicion_nombre = st.sidebar.text_input("Condición / Fruta", "Manzana - Con Agitación")
+# Selector para evitar duplicados por errores de tipeo
+tipo_ingreso = st.sidebar.radio("Modo de Condición", ["Elegir existente", "Crear nueva condición"])
+
+if tipo_ingreso == "Elegir existente":
+    condicion_nombre = st.sidebar.selectbox("Selecciona la Condición", st.session_state.ListaCondiciones)
+else:
+    nueva_cond = st.sidebar.text_input("Nombre de la nueva condición", "Fruta Nueva - Con Agitación")
+    condicion_nombre = nueva_cond.strip()
+    if condicion_nombre and condicion_nombre not in st.session_state.ListaCondiciones:
+        st.session_state.ListaCondiciones.append(condicion_nombre)
+
 input_abs_exp = st.sidebar.text_area(
     "ABS experimental (600 nm) (separados por espacio)", "0.05 0.15 0.22 0.28 0.31 0.33"
 )
@@ -104,12 +123,10 @@ if guardar_corrida:
                 else np.zeros_like(concentracion)
             )
 
-            # Contar cuántas réplicas ya existen para este grupo exacto
             grupo_base = condicion_nombre.strip()
             replicas_existentes = [item for item in st.session_state.HistorialExtraccion if item["Grupo"] == grupo_base]
             num_replica = len(replicas_existentes) + 1
 
-            # Guardar la corrida individual en el historial
             st.session_state.HistorialExtraccion.append(
                 {
                     "Grupo": grupo_base,
@@ -132,9 +149,9 @@ if len(historial) > 0:
     st.markdown("---")
     st.subheader(f"📋 Panel de Resultados y Control ({len(historial)} registros totales)")
 
+    # Solo considerar grupos que tengan datos en el historial
     grupos_unicos = sorted(list(set(item["Grupo"] for item in historial)))
     
-    # Precalcular datos estadísticos por grupo
     datos_agrupados = {}
     for grupo in grupos_unicos:
         corridas_grupo = [item for item in historial if item["Grupo"] == grupo]
@@ -161,16 +178,14 @@ if len(historial) > 0:
             "Corridas": corridas_grupo
         }
 
-    # Pestañas principales
     tabs = st.tabs([f"🧪 {g}" for g in grupos_unicos] + ["📊 Tabla Global y Gráficos", "⚡ Velocidades Estadísticas"])
 
-    # Pestañas individuales por grupo
     for idx, grupo in enumerate(grupos_unicos):
         d = datos_agrupados[grupo]
         with tabs[idx]:
-            st.write(f"### Condición: **{grupo}** ({len(d['Corridas'])} réplica(s))")
+            st.write(f"### Condición: **{grupo}** ({len(d['Corridas'])} réplica(s) agrupadas)")
 
-            st.write("#### Resumen Estadístico del Grupo (Promedio ± SD)")
+            st.write("#### Resumen Estadístico del Grupo (Promedio Único ± SD)")
             tabla_resumen = {
                 "Tiempo (min)": tiempo_muestreo,
                 "Conc. Promedio (g/L)": [f"{v:.2f}" for v in d["ConcProm"]],
@@ -190,12 +205,11 @@ if len(historial) > 0:
                     })
                 st.dataframe(tabla_2_datos, use_container_width=True)
 
-            # Gráfica individual
             fig_g, ax_g = plt.subplots(figsize=(7, 4))
             for c_item in d["Corridas"]:
                 ax_g.plot(tiempo_muestreo, c_item["Concentracion"], linestyle="--", alpha=0.4, label=f"R{c_item['ID_Replica']}")
             
-            ax_g.errorbar(tiempo_muestreo, d["ConcProm"], yerr=d["ConcStd"], fmt="o-", color="black", linewidth=2, capsize=4, label="Promedio ± SD")
+            ax_g.errorbar(tiempo_muestreo, d["ConcProm"], yerr=d["ConcStd"], fmt="o-", color="black", linewidth=2, capsize=4, label="Promedio Único ± SD")
             ax_g.set_xlabel("Tiempo (min)")
             ax_g.set_ylabel("Concentración (g/L)")
             ax_g.set_title(f"Cinética con Réplicas: {grupo}")
@@ -203,10 +217,10 @@ if len(historial) > 0:
             ax_g.legend()
             st.pyplot(fig_g)
 
-    # --- PANEL DE SELECCIÓN CON CHECKBOXES DIVIDIDO (REPLICAS VS PROMEDIOS) ---
+    # --- PANEL DE SELECCIÓN CON CHECKBOXES DIVIDIDO ---
     st.markdown("---")
-    st.subheader("🎛️ Panel de Control de Visualización (Filtros de Masas de Datos)")
-    st.markdown("Dado el alto volumen de datos (réplicas múltiples), selecciona exactamente qué deseas graficar o comparar a continuación:")
+    st.subheader("🎛️ Panel de Control de Visualización")
+    st.markdown("Selecciona qué deseas graficar o comparar sin saturar el gráfico:")
 
     col_chk1, col_chk2 = st.columns(2)
 
@@ -226,8 +240,7 @@ if len(historial) > 0:
 
     # Pestaña de Tabla Global y Gráfica Global
     with tabs[len(grupos_unicos)]:
-        st.subheader("📋 Tabla Consolidada de Todos los Grupos (Promedios)")
-        # Crear una tabla global resumen
+        st.subheader("📋 Tabla Consolidada de Todos los Grupos (Promedios y SD)")
         tabla_global = {"Tiempo (min)": tiempo_muestreo}
         for grupo in grupos_unicos:
             tabla_global[f"{grupo} (Prom. g/L)"] = [f"{v:.2f}" for v in datos_agrupados[grupo]["ConcProm"]]
@@ -240,7 +253,6 @@ if len(historial) > 0:
         if len(grupos_seleccionados) > 0 or len(corridas_seleccionadas) > 0:
             fig_glob, ax_glob = plt.subplots(figsize=(9, 5))
             
-            # Graficar promedios seleccionados con barras de error
             for grupo in grupos_seleccionados:
                 d = datos_agrupados[grupo]
                 ax_glob.errorbar(
@@ -253,7 +265,6 @@ if len(historial) > 0:
                     label=f"Promedio: {grupo}",
                 )
 
-            # Graficar réplicas individuales seleccionadas en líneas punteadas sutiles
             for c_item in corridas_seleccionadas:
                 ax_glob.plot(
                     tiempo_muestreo,

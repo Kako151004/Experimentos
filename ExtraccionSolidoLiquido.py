@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 from scipy.stats import linregress
+from fpdf import FPDF
+import tempfile
 
 st.set_page_config(
     page_title="Cinética de Extracción Sólido-Líquido", page_icon="🍇", layout="wide"
@@ -10,7 +12,7 @@ st.set_page_config(
 st.title("🍇 Cinética de Extracción y Curva de Calibrado")
 st.markdown(
     """
-Esta aplicación procesa la curva de calibrado, administra réplicas experimentales y calcula automáticamente parámetros avanzados como rendimiento, coeficiente de variación y efectos de agitación.
+Esta aplicación procesa la curva de calibrado, administra réplicas experimentales y permite exportar un informe completo en PDF con un solo clic.
 """
 )
 
@@ -27,7 +29,7 @@ if "ListaCondiciones" not in st.session_state:
     ]
 
 # --- PARÁMETROS GENERALES Y CALIBRACIÓN ---
-st.sidebar.header("⚙️️ Parámetros Generales y Calibración")
+st.sidebar.header("⚙️ Parámetros Generales y Calibración")
 
 volumen_agua = st.sidebar.number_input(
     "Volumen de agua (L)", value=1.00, format="%.3f"
@@ -55,7 +57,7 @@ try:
     abs_e = np.array([float(x) for x in input_abs_e.split()])
 
     if len(conc_e) != len(abs_e):
-        st.error("⚠️ La cantidad de valores en Concentración Estándar y ABS Estándar debe ser la misma.")
+        st.error("⚠️️ La cantidad de valores en Concentración Estándar y ABS Estándar debe ser la misma.")
     else:
         m, b, r, _, _ = linregress(conc_e, abs_e)
         r2 = r**2
@@ -117,10 +119,8 @@ if guardar_corrida:
             concentracion = (abs_exp - b) / m
             masa_aparente = concentracion * volumen_agua
             
-            # Extracción relativa corregida usando el último tiempo como referencia del 100% (o estado estacionario)
             c_ultimo = concentracion[-1] if len(concentracion) > 0 and concentracion[-1] > 0 else 1.0
             extraccion_relativa = (concentracion / c_ultimo) * 100
-            
             rendimiento_aparente = (masa_aparente / masa_fruta) * 100 if masa_fruta > 0 else np.zeros_like(masa_aparente)
 
             grupo_base = condicion_nombre.strip()
@@ -162,8 +162,6 @@ if len(historial) > 0:
 
         conc_prom = np.mean(matriz_conc, axis=0)
         conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_prom)
-        
-        # Coeficiente de Variación opcional (%)
         cv_opcional = np.where(conc_prom > 0, (conc_std / conc_prom) * 100, 0.0)
 
         masa_prom = np.mean(matriz_masa, axis=0)
@@ -185,6 +183,67 @@ if len(historial) > 0:
             "VelocidadPromedio": velocidad_promedio_grupo,
             "Corridas": corridas_grupo
         }
+
+    # --- FUNCIÓN PARA GENERAR EL PDF ---
+    def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta):
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 10, "Informe de Cinetica de Extraccion Solido-Liquido", ln=True, align="C")
+        pdf.ln(4)
+        
+        # Parámetros Generales
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(0, 6, "Parametros Generales y Calibracion:", ln=True)
+        pdf.set_font("Arial", "", 9)
+        pdf.cell(0, 5, f"- Volumen de agua: {volumen_agua:.3f} L | Masa de fruta: {masa_fruta:.2f} g", ln=True)
+        pdf.cell(0, 5, f"- Recta de Calibrado: y = {m:.4f}x + {b:.4f}  (R2 = {r2:.4f})", ln=True)
+        pdf.ln(5)
+        
+        # Resultados por Condición
+        for grupo, d in datos_agrupados.items():
+            pdf.set_font("Arial", "B", 10)
+            pdf.cell(0, 6, f"Condicion: {grupo} ({len(d['Corridas'])} replicas)", ln=True)
+            
+            pdf.set_font("Arial", "B", 8)
+            pdf.cell(15, 5, "Tiempo", 1, 0, "C")
+            pdf.cell(25, 5, "Conc.(g/L)", 1, 0, "C")
+            pdf.cell(20, 5, "SD (±)", 1, 0, "C")
+            pdf.cell(20, 5, "CV (%)", 1, 0, "C")
+            pdf.cell(25, 5, "Masa Ext.(g)", 1, 0, "C")
+            pdf.cell(25, 5, "Ext.Corr(%)", 1, 0, "C")
+            pdf.cell(25, 5, "Rend.(%)", 1, 1, "C")
+            
+            pdf.set_font("Arial", "", 8)
+            for i, t in enumerate(d["Tiempos"]):
+                pdf.cell(15, 5, f"{t}", 1, 0, "C")
+                pdf.cell(25, 5, f"{d['ConcProm'][i]:.2f}", 1, 0, "C")
+                pdf.cell(20, 5, f"{d['ConcStd'][i]:.2f}", 1, 0, "C")
+                pdf.cell(20, 5, f"{d['CV'][i]:.1f}%", 1, 0, "C")
+                pdf.cell(25, 5, f"{d['MasaProm'][i]:.2f}", 1, 0, "C")
+                pdf.cell(25, 5, f"{d['ExtProm'][i]:.1f}%", 1, 0, "C")
+                pdf.cell(25, 5, f"{d['RendProm'][i]:.2f}%", 1, 1, "C")
+            pdf.ln(4)
+            
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        pdf.output(tmp.name)
+        return tmp.name
+
+    # Botón de Descarga en la barra lateral
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📄 Descarga")
+    try:
+        ruta_pdf = generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta)
+        with open(ruta_pdf, "rb") as archivo_pdf:
+            st.sidebar.download_button(
+                label="📥 Descargar Informe PDF",
+                data=archivo_pdf,
+                file_name="informe_cinetica_extraccion.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+    except Exception as e:
+        st.sidebar.error(f"Error generando PDF: {e}")
 
     tabs = st.tabs([f"🧪 {g}" for g in grupos_unicos] + ["📊 Tabla Global y Gráficos", "⚡ Velocidades & Efecto Agitación"])
 
@@ -297,7 +356,6 @@ if len(historial) > 0:
     with tabs[len(grupos_unicos) + 1]:
         st.subheader("⚡ Análisis de Efecto de Agitación (Diferencia Absoluta y Porcentual)")
         
-        # Identificar pares de frutas (Con vs Sin Agitación)
         frutas_base = set([g.split(" - ")[0] for g in grupos_unicos if " - " in g])
         efecto_agitacion_datos = []
         
@@ -323,7 +381,7 @@ if len(historial) > 0:
         if len(efecto_agitacion_datos) > 0:
             st.dataframe(efecto_agitacion_datos, use_container_width=True)
         else:
-            st.info("💡 Para calcular automáticamente el efecto de la agitación, registra al menos una fruta con ambas condiciones ('Con Agitación' y 'Sin Agitación').")
+            st.info("💡 Para calcular automáticamente el efecto de la agitación, registra al menos una fruta con ambas condiciones.")
 
         st.markdown("---")
         st.subheader("📊 Comparación Gráfica de Velocidades Promedio")
@@ -355,4 +413,4 @@ if len(historial) > 0:
             ax_bar.legend()
             st.pyplot(fig_bar)
 else:
-    st.info("👈 Ingresa los datos de calibración y registra tus réplicas en la barra lateral.")
+    st.info("👈 Ingresa los datos de calibración y registra tus réplicas en la barra lateral para generar el informe PDF.")

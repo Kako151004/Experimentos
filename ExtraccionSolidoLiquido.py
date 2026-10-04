@@ -11,9 +11,9 @@ st.title("🍇 Cinética de Extracción Sólido-Líquido y Curva de Calibrado")
 st.markdown(
     """
     Esta aplicación procesa los datos experimentales para el análisis cinético de procesos de extracción 
-    sólido-líquido. Permite gestionar un **número dinámico de réplicas** por condición, construir la curva de calibrado, 
-    calcular promedios, desviaciones estándar, coeficientes de variación, velocidades aparentes, 
-    visualizar gráficos individuales con desviación y gráficos de barras comparativos.
+    sólido-líquido. Permite gestionar un **número dinámico de réplicas** por condición, crear o seleccionar 
+    libremente matrices vegetales, construir la curva de calibrado, calcular promedios, desviaciones estándar, 
+    coeficientes de variación, velocidades aparentes y evaluar el efecto de la agitación.
     """
 )
 
@@ -60,8 +60,14 @@ except:
 st.sidebar.markdown("---")
 st.sidebar.header("🧪 3. Registro Dinámico de Réplicas")
 
-frutas_disponibles = ["Manzana", "Pera", "Durazno/Nectarina", "Kiwi", "Frutos Rojos", "Otra Fruta"]
-fruta_sel = st.sidebar.selectbox("Seleccione la Fruta / Matriz", frutas_disponibles)
+frutas_base = ["Manzana", "Pera", "Durazno/Nectarina", "Kiwi", "Frutos Rojos"]
+opcion_fruta = st.sidebar.selectbox("Seleccione la Fruta / Matriz", frutas_base + ["➕ Escribir otra fruta / matriz..."])
+
+if opcion_fruta == "➕ Escribir otra fruta / matriz...":
+    fruta_sel = st.sidebar.text_input("Ingrese el nombre de la nueva matriz", "Zanahoria")
+else:
+    fruta_sel = opcion_fruta
+
 agitacion_sel = st.sidebar.selectbox("Condición de Agitación", ["Sin Agitación (0 rpm)", "Con Agitación (200 rpm)"])
 
 condicion_nombre = f"{fruta_sel} - {agitacion_sel}"
@@ -239,7 +245,6 @@ if len(historial) > 0:
 
             st.markdown("#### 📉 Gráfica Individual de la Condición (con Desviación Estándar)")
             
-            # Checkbox para personalizar la visualización de la sección
             mostrar_barras_error = st.checkbox(f"Mostrar barras de desviación estándar ({cond})", value=True, key=f"chk_{cond}")
             
             fig_ind, ax_ind = plt.subplots(figsize=(8, 4))
@@ -328,7 +333,6 @@ if len(historial) > 0:
         ax_bar.grid(axis="y", linestyle="--", alpha=0.6)
         plt.xticks(rotation=20, ha="right")
         
-        # Añadir etiquetas de valor encima de las barras
         for barra in barras:
             yval = barra.get_height()
             ax_bar.text(barra.get_x() + barra.get_width()/2.0, yval + 0.01, f"{yval:.2f}", ha='center', va='bottom')

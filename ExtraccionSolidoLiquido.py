@@ -10,7 +10,7 @@ st.set_page_config(
 )
 
 # --- FUNCIÓN PARA GENERAR EL PDF COMPLETO (Definida a nivel global) ---
-def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos):
+def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos, tiempo_muestreo):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 14)
@@ -52,12 +52,31 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
             pdf.cell(25, 5, f"{d['ExtProm'][i]:.1f}%", 1, 0, "C")
             pdf.cell(24, 5, f"{d['RendProm'][i]:.2f}%", 1, 1, "C")
         pdf.ln(3)
+
+    # 3. Velocidades Promedio por Intervalos
+    if len(tiempo_muestreo) > 1:
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(0, 6, "3. Velocidades Promedio de Extraccion por Intervalos:", ln=True)
+        for grupo, d in datos_agrupados.items():
+            pdf.set_font("Arial", "B", 9)
+            pdf.cell(0, 5, f" Condicion: {grupo}", ln=True)
+            
+            pdf.set_font("Arial", "B", 8)
+            pdf.cell(50, 5, "Intervalo de tiempo (min)", 1, 0, "C")
+            pdf.cell(70, 5, "Velocidad promedio ((g/L)/min)", 1, 1, "C")
+            
+            pdf.set_font("Arial", "", 8)
+            for ti, tf, vm in zip(tiempo_muestreo[:-1], tiempo_muestreo[1:], d["VelocidadPromedio"]):
+                pdf.cell(50, 5, f"{int(ti)} a {int(tf)}", 1, 0, "C")
+                pdf.cell(70, 5, f"{vm:.4f}", 1, 1, "C")
+            pdf.ln(3)
         
-    # 3. Análisis de Efecto de Agitación (si existe)
+    # 4. Análisis de Efecto de Agitación (si existe)
     if len(efecto_agitacion_datos) > 0:
         pdf.add_page()
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 6, "3. Analisis del Efecto de la Agitacion:", ln=True)
+        pdf.cell(0, 6, "4. Analisis del Efecto de la Agitacion:", ln=True)
         
         pdf.set_font("Arial", "B", 8)
         pdf.cell(45, 5, "Matriz / Fruta", 1, 0, "C")
@@ -75,10 +94,10 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
             pdf.cell(30, 5, f"{ef['Efecto Porcentual Agitación (%)']}", 1, 1, "C")
         pdf.ln(4)
 
-    # 4. Incluir Gráfica Global en el PDF
+    # 5. Incluir Gráfica Global en el PDF
     pdf.add_page()
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 6, "4. Grafica Comparativa Global:", ln=True)
+    pdf.cell(0, 6, "5. Grafica Comparativa Global:", ln=True)
     pdf.ln(2)
     
     fig_temp, ax_temp = plt.subplots(figsize=(7, 4))
@@ -298,7 +317,9 @@ if len(historial) > 0:
                     "Efecto Porcentual Agitación (%)": f"{dif_porc:.2f}%"
                 })
 
-        ruta_pdf = generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos_pdf)
+        ruta_pdf = generar_pdf_informe(
+            datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos_pdf, tiempo_muestreo
+        )
         with open(ruta_pdf, "rb") as archivo_pdf:
             st.sidebar.download_button(
                 label="📥 Descargar Informe PDF Completo",

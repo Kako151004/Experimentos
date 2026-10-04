@@ -7,13 +7,13 @@ st.set_page_config(
     page_title="Cinética de Extracción Sólido-Líquido", page_icon="🍇", layout="wide"
 )
 
-st.title("🍇 Cinética de Extracción y Curva de Calibrado")
+st.title("🍇 Cinética de Extracción Sólido-Líquido")
 st.markdown(
     """
-    Esta aplicación procesa los datos experimentales de absorbancia a 600 nm según las ecuaciones 
-    oficiales del **Reporte de Laboratorio N°2** (Prof. Belén Ponce Martínez)[cite: 1]. Permite gestionar réplicas, 
-    calcular promedios, desviaciones estándar, coeficientes de variación, velocidades aparentes, 
-    efectos de agitación y la extracción relativa normalizada.
+    Esta aplicación procesa datos experimentales de absorbancia para el análisis cinético de procesos 
+    de extracción sólido-líquido. Permite gestionar réplicas experimentales, calcular promedios, 
+    desviaciones estándar, coeficientes de variación, velocidades aparentes de extracción, efectos de agitación 
+    y la extracción relativa normalizada.
     """
 )
 
@@ -35,21 +35,21 @@ except:
 st.sidebar.markdown("---")
 st.sidebar.header("🧪 Registro de Réplicas por Condición")
 
-frutas_disponibles = ["Manzana", "Pera", "Durazno/Nectarina", "Kiwi", "Otra Fruta"]
-fruta_sel = st.sidebar.selectbox("Seleccione la Fruta / Matriz", frutas_disponibles)
-agitacion_sel = st.sidebar.selectbox("Condición de Agitación", ["Sin Agitación (0 rpm)", "Con Agitación (200 rpm)"])
+matrices_disponibles = ["Muestra 1", "Muestra 2", "Muestra 3", "Muestra 4", "Otra Muestra"]
+matriz_sel = st.sidebar.selectbox("Seleccione la Matriz / Muestra", matrices_disponibles)
+agitacion_sel = st.sidebar.selectbox("Condición de Agitación", ["Sin Agitación (0 rpm)", "Con Agitación"])
 
-condicion_nombre = f"{fruta_sel} - {agitacion_sel}"
+condicion_nombre = f"{matriz_sel} - {agitacion_sel}"
 st.sidebar.info(f"Registrando triplicado para: **{condicion_nombre}**")
 
-st.sidebar.markdown("Ingrese los valores experimentales de absorbancia ($A_{600}$) para las tres réplicas en los tiempos definidos[cite: 1]:")
-abs_r1_input = st.sidebar.text_area("Absorbancias Réplica 1 ($A_1$)", "0.05 0.12 0.18 0.22 0.25")
-abs_r2_input = st.sidebar.text_area("Absorbancias Réplica 2 ($A_2$)", "0.06 0.13 0.17 0.23 0.26")
-abs_r3_input = st.sidebar.text_area("Absorbancias Réplica 3 ($A_3$)", "0.05 0.11 0.19 0.21 0.24")
+st.sidebar.markdown("Ingrese los valores experimentales de absorbancia o respuesta para las tres réplicas en los tiempos definidos:")
+abs_r1_input = st.sidebar.text_area("Réplica 1 ($R_1$)", "0.05 0.12 0.18 0.22 0.25")
+abs_r2_input = st.sidebar.text_area("Réplica 2 ($R_2$)", "0.06 0.13 0.17 0.23 0.26")
+abs_r3_input = st.sidebar.text_area("Réplica 3 ($R_3$)", "0.05 0.11 0.19 0.21 0.24")
 
 col_b1, col_b2 = st.sidebar.columns(2)
 guardar = col_b1.button("💾 Guardar Condición")
-limpiar = col_b2.button("🗑️ Limpiar Todo")
+limpiar = col_b2.button("🗑️️ Limpiar Todo")
 
 if limpiar:
     st.session_state.historial = []
@@ -62,14 +62,14 @@ if guardar:
         arr_r3 = np.array([float(x) for x in abs_r3_input.split()])
 
         if len(arr_r1) != len(tiempos) or len(arr_r2) != len(tiempos) or len(arr_r3) != len(tiempos):
-            st.sidebar.error("⚠️ La cantidad de valores de absorbancia debe coincidir exactamente con la cantidad de tiempos.")
+            st.sidebar.error("⚠️ La cantidad de valores debe coincidir exactamente con la cantidad de tiempos.")
         else:
             # Reemplazar si ya existe la condición o agregarla
             st.session_state.historial = [h for h in st.session_state.historial if h["Condicion"] != condicion_nombre]
             
             st.session_state.historial.append({
                 "Condicion": condicion_nombre,
-                "Fruta": fruta_sel,
+                "Matriz": matriz_sel,
                 "Agitacion": agitacion_sel,
                 "R1": arr_r1,
                 "R2": arr_r2,
@@ -84,12 +84,12 @@ historial = st.session_state.historial
 
 if len(historial) > 0:
     st.markdown("---")
-    st.header("📋 Resultados y Análisis Estadístico (Metodología UTEM)")
+    st.header("📋 Resultados y Análisis Estadístico")
     st.markdown(
         """
-        A continuación se presentan las tablas detalladas con los cálculos correspondientes al promedio de absorbancia 
-        ($\overline{A}$), la desviación estándar muestral ($s$), el coeficiente de variación ($CV\%$), la velocidad aparente 
-        de extracción ($r_A$) y la extracción relativa normalizada ($E_{rel}\%$)[cite: 1, 2, 3].
+        A continuación se presentan las tablas detalladas con los cálculos correspondientes al promedio, 
+        la desviación estándar muestral ($s$), el coeficiente de variación ($CV\%$), la velocidad aparente 
+        de extracción ($r_A$) y la extracción relativa normalizada ($E_{rel}\%[cite: 2, 3]$).
         """
     )
 
@@ -100,43 +100,43 @@ if len(historial) > 0:
         r2_arr = item["R2"]
         r3_arr = item["R3"]
 
-        # 1. Promedio de absorbancia: A_bar = (A1 + A2 + A3) / 3[cite: 1, 2]
-        a_prom = (r1_arr + r2_arr + r3_arr) / 3.0
+        # 1. Promedio: Prom = (R1 + R2 + R3) / 3[cite: 1, 2]
+        val_prom = (r1_arr + r2_arr + r3_arr) / 3.0
 
-        # 2. Desviación estándar muestral: s = sqrt(sum((Ai - A_bar)^2) / (n - 1)) con n=3[cite: 1, 2]
-        suma_cuad = (r1_arr - a_prom)**2 + (r2_arr - a_prom)**2 + (r3_arr - a_prom)**2
+        # 2. Desviación estándar muestral: s = sqrt(sum((Ri - Prom)^2) / (n - 1)) con n=3[cite: 1, 2]
+        suma_cuad = (r1_arr - val_prom)**2 + (r2_arr - val_prom)**2 + (r3_arr - val_prom)**2
         s_val = np.sqrt(suma_cuad / 2.0)
 
-        # 3. Coeficiente de variación: CV(%) = (s / A_bar) * 100[cite: 1, 2]
-        cv_val = np.divide(s_val, a_prom, out=np.zeros_like(s_val), where=a_prom!=0) * 100
+        # 3. Coeficiente de variación: CV(%) = (s / Prom) * 100[cite: 1, 2]
+        cv_val = np.divide(s_val, val_prom, out=np.zeros_like(s_val), where=val_prom!=0) * 100
 
-        # 4. Extracción relativa corregida: Erel(%) = [(At - A_inicial) / (A_30 - A_inicial)] * 100[cite: 2, 3]
-        a_inicial = a_prom[0]
-        a_final = a_prom[-1]
-        denominador_erel = a_final - a_inicial
+        # 4. Extracción relativa corregida: Erel(%) = [(Val_t - Val_inicial) / (Val_final - Val_inicial)] * 100[cite: 2, 3]
+        val_inicial = val_prom[0]
+        val_final = val_prom[-1]
+        denominador_erel = val_final - val_inicial
         if denominador_erel != 0:
-            erel_val = ((a_prom - a_inicial) / denominador_erel) * 100
+            erel_val = ((val_prom - val_inicial) / denominador_erel) * 100
         else:
-            erel_val = np.zeros_like(a_prom)
+            erel_val = np.zeros_like(val_prom)
 
-        # 5. Velocidad aparente de extracción: rA = delta A / delta t[cite: 2, 3]
+        # 5. Velocidad aparente de extracción: r = delta Val / delta t[cite: 2, 3]
         dt = np.diff(tiempos)
-        da = np.diff(a_prom)
-        r_a = np.divide(da, dt, out=np.zeros_like(da), where=dt!=0)
+        dval = np.diff(val_prom)
+        r_val = np.divide(dval, dt, out=np.zeros_like(dval), where=dt!=0)
 
         datos_procesados[cond] = {
-            "Fruta": item["Fruta"],
+            "Matriz": item["Matriz"],
             "Agitacion": item["Agitacion"],
             "Tiempos": tiempos,
             "R1": r1_arr,
             "R2": r2_arr,
             "R3": r3_arr,
-            "AProm": a_prom,
+            "ValProm": val_prom,
             "S": s_val,
             "CV": cv_val,
             "ERel": erel_val,
-            "Velocidades": r_a,
-            "IntervalosVel": [f"{int(ti)} a {int(tf)} min" for ti, tf in zip(tiempos[:-1], tiempos[1:])]
+            "Velocidades": r_val,
+            "IntervalosVel": [f"{int(ti)} a {int(tf)}" for ti, tf in zip(tiempos[:-1], tiempos[1:])]
         }
 
     nombres_conds = list(datos_procesados.keys())
@@ -147,27 +147,27 @@ if len(historial) > 0:
         d = datos_procesados[cond]
         with tabs[idx]:
             st.markdown(f"### Condición evaluada: **{cond}**")
-            st.markdown("Esta sección detalla los valores experimentales obtenidos de las tres réplicas y sus parámetros estadísticos asociados.")
+            st.markdown("Esta sección detalla los valores experimentales de las tres réplicas y sus parámetros estadísticos asociados.")
             
             st.markdown("#### 📊 Tabla Principal: Promedios, Desviación Estándar y Extracción Relativa")
             df_principal = pd.DataFrame({
                 "Tiempo (min)": d["Tiempos"],
-                "Réplica 1 ($A_1$)": d["R1"],
-                "Réplica 2 ($A_2$)": d["R2"],
-                "Réplica 3 ($A_3$)": d["R3"],
-                "Promedio ($\overline{A}$)": [f"{v:.4f}" for v in d["AProm"]],
+                "Réplica 1 ($R_1$)": d["R1"],
+                "Réplica 2 ($R_2$)": d["R2"],
+                "Réplica 3 ($R_3$)": d["R3"],
+                "Promedio ($\overline{X}$)": [f"{v:.4f}" for v in d["ValProm"]],
                 "Desv. Estándar ($s$)": [f"{v:.4f}" for v in d["S"]],
                 "CV (%)": [f"{v:.2f}%" for v in d["CV"]],
                 "Extracción Relativa ($E_{rel}\%$)": [f"{v:.2f}%" for v in d["ERel"]]
             })
             st.dataframe(df_principal, use_container_width=True)
 
-            st.markdown("#### ⚡ Tabla Secundaria: Velocidad Aparente de Extracción ($r_A = \Delta A / \Delta t$)")
-            st.markdown("Mide la rapidez de cambio de la absorbancia promedio entre intervalos de tiempo consecutivos[cite: 2, 3].")
+            st.markdown("#### ⚡ Tabla Secundaria: Velocidad Aparente de Extracción ($r = \Delta X / \Delta t$)")
+            st.markdown("Mide la rapidez de cambio de la variable promedio entre intervalos de tiempo consecutivos[cite: 2, 3].")
             if len(d["Tiempos"]) > 1:
                 df_vel = pd.DataFrame({
                     "Intervalo de tiempo (min)": d["IntervalosVel"],
-                    "Velocidad Aparente $r_A$ (Abs/min)": [f"{v:.6f}" for v in d["Velocidades"]]
+                    "Velocidad Aparente $r$ (Unidades/min)": [f"{v:.6f}" for v in d["Velocidades"]]
                 })
                 st.dataframe(df_vel, use_container_width=True)
             else:
@@ -175,55 +175,55 @@ if len(historial) > 0:
 
     # Pestaña de Análisis Comparativo de Agitación
     with tabs[len(nombres_conds)]:
-        st.markdown("### ⚡ Efecto de la Agitación (0 rpm vs 200 rpm)")
+        st.markdown("### ⚡ Efecto de la Agitación (Sin Agitación vs Con Agitación)")
         st.markdown(
             """
-            Evaluación del impacto hidrodinámico mediante la diferencia absoluta ($\Delta A_{agit} = \overline{A}_{200} - \overline{A}_{0}$) 
-            y el efecto porcentual de la agitación ($E_{agit}\%$)[cite: 2, 3].
+            Evaluación del impacto hidrodinámico mediante la diferencia absoluta ($\Delta X_{agit} = \overline{X}_{agitada} - \overline{X}_{estatica}$) 
+            y el efecto porcentual de la agitación ($E_{agit}\%[cite: 2, 3]$).
             """
         )
 
-        frutas_registradas = list(set([d["Fruta"] for d in datos_procesados.values()]))
+        matrices_registradas = list(set([d["Matriz"] for d in datos_procesados.values()]))
         comparaciones_encontradas = False
 
-        for fruta in frutas_registradas:
-            cond_0 = f"{fruta} - Sin Agitación (0 rpm)"
-            cond_200 = f"{fruta} - Con Agitación (200 rpm)"
+        for matriz in matrices_registradas:
+            cond_estatica = f"{matriz} - Sin Agitación (0 rpm)"
+            cond_agitada = f"{matriz} - Con Agitación"
 
-            if cond_0 in datos_procesados and cond_200 in datos_procesados:
+            if cond_estatica in datos_procesados and cond_agitada in datos_procesados:
                 comparaciones_encontradas = True
-                st.markdown(f"#### 🍇 Fruta analizada: **{fruta}**")
+                st.markdown(f"#### 🍇 Muestra analizada: **{matriz}**")
 
-                a_0 = datos_procesados[cond_0]["AProm"]
-                a_200 = datos_procesados[cond_200]["AProm"]
-                t_arr = datos_procesados[cond_0]["Tiempos"]
+                val_0 = datos_procesados[cond_estatica]["ValProm"]
+                val_agit = datos_procesados[cond_agitada]["ValProm"]
+                t_arr = datos_procesados[cond_estatica]["Tiempos"]
 
-                delta_a = a_200 - a_0
-                e_agit = np.divide(delta_a, a_0, out=np.zeros_like(a_0), where=a_0!=0) * 100
+                delta_val = val_agit - val_0
+                e_agit = np.divide(delta_val, val_0, out=np.zeros_like(val_0), where=val_0!=0) * 100
 
                 df_agit = pd.DataFrame({
                     "Tiempo (min)": t_arr,
-                    "Promedio 0 rpm ($\overline{A}_0$)": [f"{v:.4f}" for v in a_0],
-                    "Promedio 200 rpm ($\overline{A}_{200}$)": [f"{v:.4f}" for v in a_200],
-                    "Diferencia Absoluta ($\Delta A_{agit}$)": [f"{v:.4f}" for v in delta_a],
+                    "Promedio Estático ($\overline{X}_0$)": [f"{v:.4f}" for v in val_0],
+                    "Promedio Agitado ($\overline{X}_{agit}$)": [f"{v:.4f}" for v in val_agit],
+                    "Diferencia Absoluta ($\Delta X_{agit}$)": [f"{v:.4f}" for v in delta_val],
                     "Efecto Porcentual ($E_{agit}\%$)": [f"{v:.2f}%" for v in e_agit]
                 })
                 st.dataframe(df_agit, use_container_width=True)
                 st.markdown("---")
 
         if not comparaciones_encontradas:
-            st.warning("⚠️ Para visualizar esta sección, registre al menos una fruta evaluando ambas condiciones (**Sin Agitación** y **Con Agitación**).")
+            st.warning("⚠️ Para visualizar esta sección, registre al menos una muestra evaluando ambas condiciones de agitación.")
 
     # Pestaña de Gráfica Global
     with tabs[len(nombres_conds) + 1]:
         st.markdown("### 📈 Gráfica Global de Cinética de Extracción")
-        st.markdown("Representación temporal de la absorbancia promedio incorporando las barras de error correspondientes a la desviación estándar ($s$)[cite: 1, 2].")
+        st.markdown("Representación temporal de los valores promedio incorporando las barras de error correspondientes a la desviación estándar ($s$[cite: 1, 2]).")
         
         fig, ax = plt.subplots(figsize=(10, 6))
         for cond, d in datos_procesados.items():
             ax.errorbar(
                 d["Tiempos"],
-                d["AProm"],
+                d["ValProm"],
                 yerr=d["S"],
                 fmt="-o",
                 capsize=4,
@@ -232,7 +232,7 @@ if len(historial) > 0:
             )
 
         ax.set_xlabel("Tiempo (min)", fontsize=12)
-        ax.set_ylabel("Absorbancia Promedio $A_{600}$ (adimensional)", fontsize=12)
+        ax.set_ylabel("Valor Promedio (adimensional / unidades)", fontsize=12)
         ax.set_title("Cinética de Extracción Sólido-Líquido (Promedio ± Desviación Estándar)", fontsize=14)
         ax.grid(True, linestyle="--", alpha=0.7)
         ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")

@@ -12,11 +12,12 @@ st.markdown(
     """
     Esta aplicación procesa los datos experimentales para el análisis cinético de procesos de extracción 
     sólido-líquido. Permite gestionar un **número dinámico de réplicas** por condición, construir la curva de calibrado, 
-    calcular promedios, desviaciones estándar, coeficientes de variación, velocidades aparentes y evaluar el efecto de la agitación.
+    calcular promedios, desviaciones estándar, coeficientes de variación, velocidades aparentes, 
+    visualizar gráficos individuales con desviación y gráficos de barras comparativos.
     """
 )
 
-# Inicializar historial en la sesión para múltiples réplicas por condición
+# Inicializar historial en la sesión para réplicas dinámicas
 if "historial_condiciones" not in st.session_state:
     st.session_state.historial_condiciones = {}
 
@@ -66,7 +67,6 @@ agitacion_sel = st.sidebar.selectbox("Condición de Agitación", ["Sin Agitació
 condicion_nombre = f"{fruta_sel} - {agitacion_sel}"
 st.sidebar.info(f"Condición seleccionada: **{condicion_nombre}**")
 
-# Mostrar cuántas réplicas se llevan acumuladas para esta condición
 replicas_actuales = st.session_state.historial_condiciones.get(condicion_nombre, [])
 st.sidebar.write(f"📝 Réplicas guardadas para esta condición: **{len(replicas_actuales)}**")
 
@@ -92,7 +92,7 @@ if add_rep:
     try:
         arr_rep = np.array([float(x) for x in input_nueva_replica.split()])
         if len(arr_rep) != len(tiempos):
-            st.sidebar.error("⚠️ La cantidad de valores de absorbancia debe coincidir exactamente con la cantidad de tiempos.")
+            st.sidebar.error("⚠️ La cantidad de valores de absorbancia debe coincidir exactamente con los tiempos.")
         else:
             if condicion_nombre not in st.session_state.historial_condiciones:
                 st.session_state.historial_condiciones[condicion_nombre] = []
@@ -144,12 +144,12 @@ historial = st.session_state.historial_condiciones
 
 if len(historial) > 0:
     st.markdown("---")
-    st.header("📋 Cinética de Extracción por Muestra (Réplicas Dinámicas)")
+    st.header("📋 Cinética de Extracción por Muestra")
     st.markdown(
         """
         Se procesan todas las condiciones que tengan réplicas registradas, calculando automáticamente 
         los promedios, la desviación estándar muestral ($s$), el coeficiente de variación ($CV\%$), 
-        la concentración mediante la curva de calibrado y la velocidad aparente.
+        la concentración y el gráfico específico con barras de error para cada sección.
         """
     )
 
@@ -158,12 +158,9 @@ if len(historial) > 0:
         if len(lista_reps) == 0:
             continue
         
-        matriz_reps = np.array(lista_reps) # Filas = réplicas, Columnas = tiempos
-        
-        # Promedio a lo largo de las réplicas
+        matriz_reps = np.array(lista_reps)
         a_prom = np.mean(matriz_reps, axis=0)
         
-        # Desviación estándar muestral (si hay 1 réplica, s = 0)
         if len(lista_reps) > 1:
             s_val = np.std(matriz_reps, axis=0, ddof=1)
         else:
@@ -207,15 +204,15 @@ if len(historial) > 0:
         }
 
     nombres_conds = list(datos_procesados.keys())
-    tabs = st.tabs([f"🍇 {c}" for c in nombres_conds] + ["⚡ Análisis de Agitación", "📈 Gráfica Global"])
+    tabs = st.tabs([f"🍇 {c}" for c in nombres_conds] + ["⚡ Análisis de Agitación", "📈 Gráfica Global & Barras"])
 
+    # Pestañas individuales por condición con su gráfica de desviación y controles
     for idx, cond in enumerate(nombres_conds):
         d = datos_procesados[cond]
         with tabs[idx]:
             st.markdown(f"### Condición evaluada: **{cond}**")
             st.markdown(f"Total de réplicas analizadas: **{len(d['MatrizReps'])}**")
             
-            # Construir tabla principal dinámicamente con las réplicas añadidas
             dict_tabla = {"Tiempo (min)": d["Tiempos"]}
             for i, rep_vals in enumerate(d["MatrizReps"]):
                 dict_tabla[f"Réplica {i+1} ($A$)"] = rep_vals
@@ -240,6 +237,25 @@ if len(historial) > 0:
             else:
                 st.info("Se requieren al menos 2 tiempos de muestreo para calcular las velocidades.")
 
+            st.markdown("#### 📉 Gráfica Individual de la Condición (con Desviación Estándar)")
+            
+            # Checkbox para personalizar la visualización de la sección
+            mostrar_barras_error = st.checkbox(f"Mostrar barras de desviación estándar ({cond})", value=True, key=f"chk_{cond}")
+            
+            fig_ind, ax_ind = plt.subplots(figsize=(8, 4))
+            if mostrar_barras_error:
+                ax_ind.errorbar(d["Tiempos"], d["AProm"], yerr=d["S"], fmt="-o", capsize=4, color="purple", label="Promedio $\pm$ s")
+            else:
+                ax_ind.plot(d["Tiempos"], d["AProm"], "-o", color="purple", label="Promedio")
+                
+            ax_ind.set_xlabel("Tiempo (min)")
+            ax_ind.set_ylabel("Absorbancia Promedio ($A_{600}$)")
+            ax_ind.set_title(f"Cinética de Extracción: {cond}")
+            ax_ind.grid(True, linestyle="--", alpha=0.6)
+            ax_ind.legend()
+            st.pyplot(fig_ind)
+
+    # Pestaña de Análisis Comparativo de Agitación
     with tabs[len(nombres_conds)]:
         st.markdown("### ⚡ Efecto de la Agitación (Sin Agitación vs Con Agitación)")
         st.markdown("Evaluación del impacto hidrodinámico comparando los promedios por tipo de muestra vegetal.")
@@ -275,11 +291,12 @@ if len(historial) > 0:
         if not comparaciones_encontradas:
             st.warning("⚠️ Para visualizar esta sección, registra al menos una fruta evaluando ambas condiciones (Sin Agitación y Con Agitación).")
 
+    # Pestaña de Gráfica Global y Gráfico de Barras
     with tabs[len(nombres_conds) + 1]:
         st.markdown("### 📈 Gráfica Global de Cinética de Extracción")
-        st.markdown("Evolución temporal de la concentración promedio obtenida a través de la curva de calibrado.")
+        st.markdown("Evolución temporal de la concentración promedio obtenida a través de la curva de calibrado para todas las condiciones.")
         
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(10, 5))
         for cond, d in datos_procesados.items():
             ax.plot(
                 d["Tiempos"],
@@ -291,11 +308,33 @@ if len(historial) > 0:
 
         ax.set_xlabel("Tiempo (min)", fontsize=12)
         ax.set_ylabel("Concentración Promedio", fontsize=12)
-        ax.set_title("Cinética de Extracción (Concentración vs Tiempo)", fontsize=14)
+        ax.set_title("Cinética Global de Extracción (Concentración vs Tiempo)", fontsize=14)
         ax.grid(True, linestyle="--", alpha=0.7)
         ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
         plt.tight_layout()
         st.pyplot(fig)
+
+        st.markdown("---")
+        st.markdown("### 📊 Gráfico de Barras Comparativo (Concentración Final)")
+        st.markdown("Comparación directa de la concentración alcanzada en el último tiempo de muestreo para cada condición registrada.")
+        
+        condiciones_nombres = list(datos_procesados.keys())
+        concentraciones_finales = [datos_procesados[c]["CProm"][-1] for c in condiciones_nombres]
+        
+        fig_bar, ax_bar = plt.subplots(figsize=(10, 4))
+        barras = ax_bar.bar(condiciones_nombres, concentraciones_finales, color=["purple", "orange", "teal", "crimson", "royalBlue"][:len(condiciones_nombres)])
+        ax_bar.set_ylabel("Concentración Final")
+        ax_bar.set_title("Comparativa de Concentración Final por Condición")
+        ax_bar.grid(axis="y", linestyle="--", alpha=0.6)
+        plt.xticks(rotation=20, ha="right")
+        
+        # Añadir etiquetas de valor encima de las barras
+        for barra in barras:
+            yval = barra.get_height()
+            ax_bar.text(barra.get_x() + barra.get_width()/2.0, yval + 0.01, f"{yval:.2f}", ha='center', va='bottom')
+            
+        plt.tight_layout()
+        st.pyplot(fig_bar)
 
 else:
     st.info("👈 Ingresa los datos de tu curva de calibrado y añade al menos una réplica en la barra lateral para iniciar el análisis.")

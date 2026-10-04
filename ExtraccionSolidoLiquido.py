@@ -4,21 +4,20 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="Reporte Lab 2: Extracción Sólido-Líquido", page_icon="📊", layout="wide"
+    page_title="Cinética de Extracción Sólido-Líquido", page_icon="🍇", layout="wide"
 )
 
-st.title("📊 Laboratorio de Operaciones Unitarias en Biotecnología - UTEM")
-st.subheader("Cinética de Extracción Sólido-Líquido (Análisis basado en Absorbancia $A_{600}$)")
-
+st.title("🍇 Cinética de Extracción y Curva de Calibrado")
 st.markdown(
     """
     Esta aplicación procesa los datos experimentales de absorbancia a 600 nm según las ecuaciones 
-    oficiales del **Reporte de Laboratorio N°2** (Prof. Belén Ponce Martínez). Gestiona réplicas, 
-    calcula promedios, desviaciones estándar, velocidades aparentes, efectos de agitación y extracción relativa.
+    oficiales del **Reporte de Laboratorio N°2** (Prof. Belén Ponce Martínez)[cite: 1]. Permite gestionar réplicas, 
+    calcular promedios, desviaciones estándar, coeficientes de variación, velocidades aparentes, 
+    efectos de agitación y la extracción relativa normalizada.
     """
 )
 
-# Inicializar estado en la sesión
+# Inicializar historial en la sesión
 if "historial" not in st.session_state:
     st.session_state.historial = []
 
@@ -43,7 +42,7 @@ agitacion_sel = st.sidebar.selectbox("Condición de Agitación", ["Sin Agitació
 condicion_nombre = f"{fruta_sel} - {agitacion_sel}"
 st.sidebar.info(f"Registrando triplicado para: **{condicion_nombre}**")
 
-st.sidebar.markdown("Ingrese los valores de absorbancia ($A_{600}$) separados por espacio para cada réplica en los tiempos definidos:")
+st.sidebar.markdown("Ingrese los valores experimentales de absorbancia ($A_{600}$) para las tres réplicas en los tiempos definidos[cite: 1]:")
 abs_r1_input = st.sidebar.text_area("Absorbancias Réplica 1 ($A_1$)", "0.05 0.12 0.18 0.22 0.25")
 abs_r2_input = st.sidebar.text_area("Absorbancias Réplica 2 ($A_2$)", "0.06 0.13 0.17 0.23 0.26")
 abs_r3_input = st.sidebar.text_area("Absorbancias Réplica 3 ($A_3$)", "0.05 0.11 0.19 0.21 0.24")
@@ -85,7 +84,14 @@ historial = st.session_state.historial
 
 if len(historial) > 0:
     st.markdown("---")
-    st.header("📋 Resultados y Tablas de Análisis (Guía UTEM)")
+    st.header("📋 Resultados y Análisis Estadístico (Metodología UTEM)")
+    st.markdown(
+        """
+        A continuación se presentan las tablas detalladas con los cálculos correspondientes al promedio de absorbancia 
+        ($\overline{A}$), la desviación estándar muestral ($s$), el coeficiente de variación ($CV\%$), la velocidad aparente 
+        de extracción ($r_A$) y la extracción relativa normalizada ($E_{rel}\%$)[cite: 1, 2, 3].
+        """
+    )
 
     datos_procesados = {}
     for item in historial:
@@ -130,45 +136,52 @@ if len(historial) > 0:
             "CV": cv_val,
             "ERel": erel_val,
             "Velocidades": r_a,
-            "IntervalosVel": [f"{int(ti)} - {int(tf)} min" for ti, tf in zip(tiempos[:-1], tiempos[1:])]
+            "IntervalosVel": [f"{int(ti)} a {int(tf)} min" for ti, tf in zip(tiempos[:-1], tiempos[1:])]
         }
 
     nombres_conds = list(datos_procesados.keys())
-    tabs = st.tabs([f"🧪 {c}" for c in nombres_conds] + ["📊 Análisis de Agitación", "📈 Gráfica Global"])
+    tabs = st.tabs([f"🍇 {c}" for c in nombres_conds] + ["⚡ Análisis de Agitación", "📈 Gráfica Global"])
 
     # Pestañas individuales por condición
     for idx, cond in enumerate(nombres_conds):
         d = datos_procesados[cond]
         with tabs[idx]:
-            st.markdown(f"### Condición: **{cond}**")
+            st.markdown(f"### Condición evaluada: **{cond}**")
+            st.markdown("Esta sección detalla los valores experimentales obtenidos de las tres réplicas y sus parámetros estadísticos asociados.")
             
-            st.markdown("#### 1. Datos Experimentales y Estadísticos Básicos")
+            st.markdown("#### 📊 Tabla Principal: Promedios, Desviación Estándar y Extracción Relativa")
             df_principal = pd.DataFrame({
                 "Tiempo (min)": d["Tiempos"],
-                "Réplica 1": d["R1"],
-                "Réplica 2": d["R2"],
-                "Réplica 3": d["R3"],
-                "Promedio (A)": [f"{v:.4f}" for v in d["AProm"]],
-                "Desv. Estándar (s)": [f"{v:.4f}" for v in d["S"]],
+                "Réplica 1 ($A_1$)": d["R1"],
+                "Réplica 2 ($A_2$)": d["R2"],
+                "Réplica 3 ($A_3$)": d["R3"],
+                "Promedio ($\overline{A}$)": [f"{v:.4f}" for v in d["AProm"]],
+                "Desv. Estándar ($s$)": [f"{v:.4f}" for v in d["S"]],
                 "CV (%)": [f"{v:.2f}%" for v in d["CV"]],
-                "Extracción Relativa Erel (%)": [f"{v:.2f}%" for v in d["ERel"]]
+                "Extracción Relativa ($E_{rel}\%$)": [f"{v:.2f}%" for v in d["ERel"]]
             })
             st.dataframe(df_principal, use_container_width=True)
 
-            st.markdown("#### 2. Velocidad Aparente de Extracción ($r_A = \Delta A / \Delta t$)")[cite: 2, 3]
+            st.markdown("#### ⚡ Tabla Secundaria: Velocidad Aparente de Extracción ($r_A = \Delta A / \Delta t$)")
+            st.markdown("Mide la rapidez de cambio de la absorbancia promedio entre intervalos de tiempo consecutivos[cite: 2, 3].")
             if len(d["Tiempos"]) > 1:
                 df_vel = pd.DataFrame({
-                    "Intervalo (min)": d["IntervalosVel"],
-                    "Velocidad Aparente rA (Abs/min)": [f"{v:.6f}" for v in d["Velocidades"]]
+                    "Intervalo de tiempo (min)": d["IntervalosVel"],
+                    "Velocidad Aparente $r_A$ (Abs/min)": [f"{v:.6f}" for v in d["Velocidades"]]
                 })
                 st.dataframe(df_vel, use_container_width=True)
             else:
-                st.info("Se requieren al menos 2 tiempos de muestreo para calcular velocidades.")
+                st.info("Se requieren al menos 2 tiempos de muestreo para calcular las velocidades.")
 
     # Pestaña de Análisis Comparativo de Agitación
     with tabs[len(nombres_conds)]:
         st.markdown("### ⚡ Efecto de la Agitación (0 rpm vs 200 rpm)")
-        st.markdown("Cálculo de la diferencia absoluta ($\Delta A_{agit}$) y el efecto porcentual ($E_{agit}\%$)[cite: 2, 3].")
+        st.markdown(
+            """
+            Evaluación del impacto hidrodinámico mediante la diferencia absoluta ($\Delta A_{agit} = \overline{A}_{200} - \overline{A}_{0}$) 
+            y el efecto porcentual de la agitación ($E_{agit}\%$)[cite: 2, 3].
+            """
+        )
 
         frutas_registradas = list(set([d["Fruta"] for d in datos_procesados.values()]))
         comparaciones_encontradas = False
@@ -179,7 +192,7 @@ if len(historial) > 0:
 
             if cond_0 in datos_procesados and cond_200 in datos_procesados:
                 comparaciones_encontradas = True
-                st.markdown(f"#### 🍎 Fruta: **{fruta}**")
+                st.markdown(f"#### 🍇 Fruta analizada: **{fruta}**")
 
                 a_0 = datos_procesados[cond_0]["AProm"]
                 a_200 = datos_procesados[cond_200]["AProm"]
@@ -190,20 +203,21 @@ if len(historial) > 0:
 
                 df_agit = pd.DataFrame({
                     "Tiempo (min)": t_arr,
-                    "Promedio 0 rpm": [f"{v:.4f}" for v in a_0],
-                    "Promedio 200 rpm": [f"{v:.4f}" for v in a_200],
+                    "Promedio 0 rpm ($\overline{A}_0$)": [f"{v:.4f}" for v in a_0],
+                    "Promedio 200 rpm ($\overline{A}_{200}$)": [f"{v:.4f}" for v in a_200],
                     "Diferencia Absoluta ($\Delta A_{agit}$)": [f"{v:.4f}" for v in delta_a],
-                    "Efecto Agitación ($E_{agit}\%$)": [f"{v:.2f}%" for v in e_agit]
+                    "Efecto Porcentual ($E_{agit}\%$)": [f"{v:.2f}%" for v in e_agit]
                 })
                 st.dataframe(df_agit, use_container_width=True)
                 st.markdown("---")
 
         if not comparaciones_encontradas:
-            st.warning("⚠️ Registre al menos una fruta con ambas condiciones (**Sin Agitación** y **Con Agitación**) para visualizar esta tabla.")
+            st.warning("⚠️ Para visualizar esta sección, registre al menos una fruta evaluando ambas condiciones (**Sin Agitación** y **Con Agitación**).")
 
     # Pestaña de Gráfica Global
     with tabs[len(nombres_conds) + 1]:
-        st.markdown("### 📈 Gráfica Global de Cinética ($A_{600}$ vs Tiempo)")
+        st.markdown("### 📈 Gráfica Global de Cinética de Extracción")
+        st.markdown("Representación temporal de la absorbancia promedio incorporando las barras de error correspondientes a la desviación estándar ($s$)[cite: 1, 2].")
         
         fig, ax = plt.subplots(figsize=(10, 6))
         for cond, d in datos_procesados.items():
@@ -226,4 +240,4 @@ if len(historial) > 0:
         st.pyplot(fig)
 
 else:
-    st.info("👈 Por favor, ingrese y guarde al menos una condición en la barra lateral para comenzar el análisis.")
+    st.info("👈 Por favor, ingresa y guarda al menos una condición en la barra lateral para iniciar el análisis cinético.")

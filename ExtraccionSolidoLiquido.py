@@ -27,14 +27,15 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
     
     # 2. Resultados por Condición
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 6, "2. Resultados Estadisticos por Condicion:", ln=True)
+    pdf.cell(0, 6, "2. Resultados Estadisticos por Condicion (Absorbancia y Concentracion):", ln=True)
     
     for grupo, d in datos_agrupados.items():
         pdf.set_font("Arial", "B", 9)
         pdf.cell(0, 5, f" Condicion: {grupo} ({len(d['Corridas'])} replicas)", ln=True)
         
-        pdf.set_font("Arial", "B", 8)
+        pdf.set_font("Arial", "B", 7)
         pdf.cell(12, 5, "T(min)", 1, 0, "C")
+        pdf.cell(32, 5, "ABS Prom ± SD", 1, 0, "C")
         pdf.cell(24, 5, "Conc.(g/L)", 1, 0, "C")
         pdf.cell(18, 5, "SD (±)", 1, 0, "C")
         pdf.cell(18, 5, "CV (%)", 1, 0, "C")
@@ -42,9 +43,11 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
         pdf.cell(25, 5, "Ext.Corr(%)", 1, 0, "C")
         pdf.cell(24, 5, "Rend.(%)", 1, 1, "C")
         
-        pdf.set_font("Arial", "", 8)
+        pdf.set_font("Arial", "", 7)
         for i, t in enumerate(d["Tiempos"]):
+            abs_str = f"{d['AbsProm'][i]:.3f} ± {d['AbsStd'][i]:.3f}"
             pdf.cell(12, 5, f"{t}", 1, 0, "C")
+            pdf.cell(32, 5, abs_str, 1, 0, "C")
             pdf.cell(24, 5, f"{d['ConcProm'][i]:.2f}", 1, 0, "C")
             pdf.cell(18, 5, f"{d['ConcStd'][i]:.2f}", 1, 0, "C")
             pdf.cell(18, 5, f"{d['CV'][i]:.1f}%", 1, 0, "C")
@@ -356,10 +359,14 @@ if len(historial) > 0:
     datos_agrupados = {}
     for grupo in grupos_unicos:
         corridas_grupo = [item for item in historial if item["Grupo"] == grupo]
+        matriz_abs = np.array([c["ABSExperimental"] for c in corridas_grupo])
         matriz_conc = np.array([c["Concentracion"] for c in corridas_grupo])
         matriz_masa = np.array([c["MasaAparente"] for c in corridas_grupo])
         matriz_ext = np.array([c["ExtraccionRelativa"] for c in corridas_grupo])
         matriz_rend = np.array([c["RendimientoAparente"] for c in corridas_grupo])
+
+        abs_prom = np.mean(matriz_abs, axis=0)
+        abs_std = np.std(matriz_abs, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(abs_prom)
 
         conc_prom = np.mean(matriz_conc, axis=0)
         conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_prom)
@@ -375,6 +382,8 @@ if len(historial) > 0:
 
         datos_agrupados[grupo] = {
             "Tiempos": tiempo_muestreo,
+            "AbsProm": abs_prom,
+            "AbsStd": abs_std,
             "ConcProm": conc_prom,
             "ConcStd": conc_std,
             "CV": cv_opcional,
@@ -427,9 +436,10 @@ if len(historial) > 0:
         with tabs[idx]:
             st.write(f"### Condición: **{grupo}** ({len(d['Corridas'])} réplica(s) agrupadas)")
 
-            st.write("#### Resumen Estadístico Completo (Promedio ± SD, CV, Masa, Extracción y Rendimiento)")
+            st.write("#### Resumen Estadístico Completo (Absorbancia Prom ± SD, Concentración, CV, Masa, Extracción y Rendimiento)")
             tabla_resumen = {
                 "Tiempo (min)": tiempo_muestreo,
+                "ABS Prom ± SD": [f"{d['AbsProm'][i]:.3f} ± {d['AbsStd'][i]:.3f}" for i in range(len(tiempo_muestreo))],
                 "Conc. Promedio (g/L)": [f"{v:.2f}" for v in d["ConcProm"]],
                 "Desv. Estándar (± SD)": [f"{v:.2f}" for v in d["ConcStd"]],
                 "Coef. de Variación (CV %)": [f"{v:.2f}%" for v in d["CV"]],
@@ -485,6 +495,7 @@ if len(historial) > 0:
         st.subheader("📋 Tabla Consolidada de Todos los Grupos")
         tabla_global = {"Tiempo (min)": tiempo_muestreo}
         for grupo in grupos_unicos:
+            tabla_global[f"{grupo} (ABS Prom ± SD)"] = [f"{datos_agrupados[grupo]['AbsProm'][i]:.3f} ± {datos_agrupados[grupo]['AbsStd'][i]:.3f}" for i in range(len(tiempo_muestreo))]
             tabla_global[f"{grupo} (g/L)"] = [f"{v:.2f}" for v in datos_agrupados[grupo]["ConcProm"]]
             tabla_global[f"{grupo} (CV %)"] = [f"{v:.2f}%" for v in datos_agrupados[grupo]["CV"]]
         st.dataframe(tabla_global, use_container_width=True)

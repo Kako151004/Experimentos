@@ -9,7 +9,7 @@ st.set_page_config(
     page_title="Cinética de Extracción Sólido-Líquido", page_icon="🍇", layout="wide"
 )
 
-# --- FUNCIÓN PARA GENERAR EL PDF COMPLETO (Incluye Nuevas Gráficas) ---
+# --- FUNCIÓN PARA GENERAR EL PDF COMPLETO ---
 def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos, tiempo_muestreo, frutas_base):
     pdf = FPDF()
     pdf.add_page()
@@ -75,7 +75,6 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
                 pdf.cell(70, 5, f"{vm:.4f}", 1, 1, "C")
             pdf.ln(2)
 
-        # Gráfico de barras de velocidades
         pdf.ln(2)
         pdf.set_font("Arial", "B", 10)
         pdf.cell(0, 6, "Grafico de Velocidades Promedio:", ln=True)
@@ -113,11 +112,11 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
         pdf.image(img_bar_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
         pdf.ln(5)
         
-    # 4. Análisis de Efecto de Agitación (Tabla y Gráfico Dinámico vs Tiempo)
+    # 4. Análisis de Efecto de Agitación
     if len(efecto_agitacion_datos) > 0:
         pdf.add_page()
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 6, "4. Analisis del Efecto de la Agitacion:", ln=True)
+        pdf.cell(0, 6, "4. Analisis del Efecto de la Agitacion (Punto Final):", ln=True)
         
         pdf.set_font("Arial", "B", 8)
         pdf.cell(45, 5, "Matriz / Fruta", 1, 0, "C")
@@ -135,7 +134,6 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
             pdf.cell(30, 5, f"{ef['Efecto Porcentual Agitación (%)']}", 1, 1, "C")
         pdf.ln(4)
 
-        # Gráfico: Efecto Porcentual de Agitación (%) vs Tiempo
         pdf.set_font("Arial", "B", 10)
         pdf.cell(0, 6, "Efecto Porcentual de Agitacion (%) vs Tiempo:", ln=True)
         pdf.ln(1)
@@ -147,7 +145,6 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
             if cond_con in datos_agrupados and cond_sin in datos_agrupados:
                 c_con = datos_agrupados[cond_con]["ConcProm"]
                 c_sin = datos_agrupados[cond_sin]["ConcProm"]
-                # Evitar división por cero
                 efecto_t = np.where(c_sin > 0, ((c_con - c_sin) / c_sin) * 100, 0.0)
                 ax_ef_temp.plot(tiempo_muestreo, efecto_t, marker="o", label=fruta)
 
@@ -164,7 +161,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
         pdf.image(img_ef_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
         pdf.ln(5)
 
-    # 5. Gráfico de Extracción Relativa Corregida (Erel %) vs Tiempo
+    # 5. Gráfico de Extracción Relativa Corregida
     pdf.add_page()
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 6, "5. Extraccion Relativa Corregida (Erel %) vs Tiempo:", ln=True)
@@ -186,7 +183,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
     pdf.image(img_er_tmp.name, x=15, y=pdf.get_y() + 2, w=170)
     pdf.ln(5)
 
-    # 6. Incluir Gráfica Global en el PDF
+    # 6. Gráfica Global
     pdf.add_page()
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 6, "6. Grafica Comparativa Global:", ln=True)
@@ -538,7 +535,7 @@ if len(historial) > 0:
         else:
             st.warning("⚠️ Selecciona al menos un grupo o réplica en el panel superior.")
 
-    # Pestaña de Velocidades y Efecto de Agitación (Incluye Gráfico de Efecto % vs Tiempo)
+    # Pestaña de Velocidades y Efecto de Agitación (Incluye Tabla Temporal y Gráfico)
     with tabs[len(grupos_unicos) + 1]:
         st.subheader("⚡ Análisis de Efecto de Agitación")
         
@@ -563,9 +560,36 @@ if len(historial) > 0:
                 })
         
         if len(efecto_agitacion_datos) > 0:
+            st.markdown("##### Resumen Final (Punto Final a 30 min)")
             st.dataframe(efecto_agitacion_datos, use_container_width=True)
         else:
             st.info("💡 Para calcular automáticamente el efecto de la agitación, registra al menos una fruta con ambas condiciones.")
+
+        st.markdown("---")
+        st.subheader("📋 Desglose Detallado del Efecto de Agitación por Cada Tiempo")
+        
+        efecto_por_tiempo_datos = []
+        for fruta in frutas_base:
+            cond_con = f"{fruta} - Con Agitación"
+            cond_sin = f"{fruta} - Sin Agitación"
+            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
+                c_con = datos_agrupados[cond_con]["ConcProm"]
+                c_sin = datos_agrupados[cond_sin]["ConcProm"]
+                efecto_t = np.where(c_sin > 0, ((c_con - c_sin) / c_sin) * 100, 0.0)
+                
+                for i, t in enumerate(tiempo_muestreo):
+                    efecto_por_tiempo_datos.append({
+                        "Matriz / Fruta": fruta,
+                        "Tiempo (min)": int(t),
+                        "Conc. Con Agit. (g/L)": f"{c_con[i]:.2f}",
+                        "Conc. Sin Agit. (g/L)": f"{c_sin[i]:.2f}",
+                        "Efecto de Agitación (%)": f"{efecto_t[i]:.2f}%"
+                    })
+
+        if len(efecto_por_tiempo_datos) > 0:
+            st.dataframe(efecto_por_tiempo_datos, use_container_width=True)
+        else:
+            st.info("💡 Registra parejas completas (Con y Sin agitación) para ver la tabla temporal detallada.")
 
         st.markdown("---")
         st.subheader("📈 Evolución Temporal del Efecto Porcentual de Agitación (%) vs Tiempo")

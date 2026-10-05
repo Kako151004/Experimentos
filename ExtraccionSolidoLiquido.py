@@ -351,3 +351,75 @@ if limpiar_historial:
 
 if guardar_corrida:
     try:
+        abs_exp = np.array([float(x) for x in input_abs_exp.split()])
+
+        if len(abs_exp) != len(tiempo_muestreo):
+            st.sidebar.error("⚠️ La cantidad de valores de ABS experimental debe coincidir con los Tiempos de muestreo.")
+        else:
+            concentracion = (abs_exp - b) / m
+            masa_aparente = concentracion * volumen_agua
+            
+            c_ultimo = concentracion[-1] if len(concentracion) > 0 and concentracion[-1] > 0 else 1.0
+            extraccion_relativa = (concentracion / c_ultimo) * 100
+            rendimiento_aparente = (masa_aparente / masa_fruta) * 100 if masa_fruta > 0 else np.zeros_like(masa_aparente)
+
+            grupo_base = condicion_nombre.strip()
+            replicas_existentes = [item for item in st.session_state.HistorialExtraccion if item["Grupo"] == grupo_base]
+            num_replica = len(replicas_existentes) + 1
+
+            st.session_state.HistorialExtraccion.append(
+                {
+                    "Grupo": grupo_base,
+                    "ID_Replica": num_replica,
+                    "EtiquetaCompleta": f"{grupo_base} (R{num_replica})",
+                    "ABSExperimental": abs_exp,
+                    "Concentracion": concentracion,
+                    "MasaAparente": masa_aparente,
+                    "ExtraccionRelativa": extraccion_relativa,
+                    "RendimientoAparente": rendimiento_aparente,
+                }
+            )
+            st.sidebar.success(f"✅ Guardado: **{grupo_base}** (Réplica #{num_replica})")
+    except Exception as e:
+        st.sidebar.error(f"Error procesando datos: {e}")
+
+# ==========================================
+# --- AGRUPAR Y PROCESAR ESTADÍSTICAS ---
+# ==========================================
+historial = st.session_state.HistorialExtraccion
+
+if len(historial) > 0:
+    st.markdown("---")
+    st.subheader(f"📋 Panel de Resultados y Control ({len(historial)} registros totales)")
+
+    grupos_unicos = sorted(list(set(item["Grupo"] for item in historial)))
+    frutas_base = sorted(list(set([g.split(" - ")[0] for g in grupos_unicos if " - " in g])))
+    
+    datos_agrupados = {}
+    for grupo in grupos_unicos:
+        corridas_grupo = [item for item in historial if item["Grupo"] == grupo]
+        matriz_abs = np.array([c["ABSExperimental"] for c in corridas_grupo])
+        matriz_conc = np.array([c["Concentracion"] for c in corridas_grupo])
+        matriz_masa = np.array([c["MasaAparente"] for c in corridas_grupo])
+        matriz_ext = np.array([c["ExtraccionRelativa"] for c in corridas_grupo])
+        matriz_rend = np.array([c["RendimientoAparente"] for c in corridas_grupo])
+
+        abs_prom = np.mean(matriz_abs, axis=0)
+        abs_std = np.std(matriz_abs, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(abs_prom)
+
+        conc_prom = np.mean(matriz_conc, axis=0)
+        conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_prom)
+        cv_opcional = np.where(conc_prom > 0, (conc_std / conc_prom) * 100, 0.0)
+
+        masa_prom = np.mean(matriz_masa, axis=0)
+        ext_prom = np.mean(matriz_ext, axis=0)
+        rend_prom = np.mean(matriz_rend, axis=0)
+
+        tm = np.diff(tiempo_muestreo)
+        c_diff = np.diff(conc_prom)
+        velocidad_promedio_grupo = c_diff / tm if np.all(tm > 0) else np.zeros_like(c_diff)
+
+        datos_agrupados[grupo] = {
+            "Tiempos": tiempo_muestreo,
+            "AbsProm": abs_prom,
+            "AbsStd": abs_std,

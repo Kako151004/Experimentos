@@ -112,14 +112,13 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
         pdf.image(img_bar_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
         pdf.ln(5)
         
-    # 4. Análisis de Efecto de Agitación (Punto Final + Detalle por Tiempos)
+    # 4. Análisis de Efecto de Agitación
     if len(efecto_agitacion_datos) > 0:
         pdf.add_page()
         pdf.set_font("Arial", "B", 10)
         pdf.cell(0, 6, "4. Analisis del Efecto de la Agitacion:", ln=True)
         pdf.ln(2)
         
-        # 4.1 Tabla Punto Final
         pdf.set_font("Arial", "B", 9)
         pdf.cell(0, 5, "Resumen Punto Final (30 min):", ln=True)
         pdf.set_font("Arial", "B", 8)
@@ -137,60 +136,6 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
             pdf.cell(35, 5, f"{ef['Diferencia Absoluta (g/L)']}", 1, 0, "C")
             pdf.cell(30, 5, f"{ef['Efecto Porcentual Agitación (%)']}", 1, 1, "C")
         pdf.ln(4)
-
-        # 4.2 Tabla Detallada por Cada Tiempo de Muestreo
-        pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 5, "Efecto de Agitacion Desglosado por Cada Tiempo de Muestreo:", ln=True)
-        pdf.set_font("Arial", "B", 8)
-        pdf.cell(45, 5, "Matriz / Fruta", 1, 0, "C")
-        pdf.cell(25, 5, "Tiempo (min)", 1, 0, "C")
-        pdf.cell(35, 5, "Conc. Con Agit.", 1, 0, "C")
-        pdf.cell(35, 5, "Conc. Sin Agit.", 1, 0, "C")
-        pdf.cell(40, 5, "Efecto Agitación (%)", 1, 1, "C")
-
-        pdf.set_font("Arial", "", 8)
-        for fruta in frutas_base:
-            cond_con = f"{fruta} - Con Agitación"
-            cond_sin = f"{fruta} - Sin Agitación"
-            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
-                c_con = datos_agrupados[cond_con]["ConcProm"]
-                c_sin = datos_agrupados[cond_sin]["ConcProm"]
-                efecto_t = np.where(c_sin > 0, ((c_con - c_sin) / c_sin) * 100, 0.0)
-                for i, t in enumerate(tiempo_muestreo):
-                    pdf.cell(45, 5, f"{fruta}", 1, 0, "L")
-                    pdf.cell(25, 5, f"{int(t)}", 1, 0, "C")
-                    pdf.cell(35, 5, f"{c_con[i]:.2f}", 1, 0, "C")
-                    pdf.cell(35, 5, f"{c_sin[i]:.2f}", 1, 0, "C")
-                    pdf.cell(40, 5, f"{efecto_t[i]:.2f}%", 1, 1, "C")
-        pdf.ln(4)
-
-        # 4.3 Gráfico de Evolución Temporal
-        pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 6, "Efecto Porcentual de Agitacion (%) vs Tiempo:", ln=True)
-        pdf.ln(1)
-
-        fig_ef_temp, ax_ef_temp = plt.subplots(figsize=(7, 3.2))
-        for fruta in frutas_base:
-            cond_con = f"{fruta} - Con Agitación"
-            cond_sin = f"{fruta} - Sin Agitación"
-            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
-                c_con = datos_agrupados[cond_con]["ConcProm"]
-                c_sin = datos_agrupados[cond_sin]["ConcProm"]
-                efecto_t = np.where(c_sin > 0, ((c_con - c_sin) / c_sin) * 100, 0.0)
-                ax_ef_temp.plot(tiempo_muestreo, efecto_t, marker="o", label=fruta)
-
-        ax_ef_temp.set_xlabel("Tiempo (min)")
-        ax_ef_temp.set_ylabel("Efecto de Agitación (%)")
-        ax_ef_temp.set_title("Evolución Temporal del Efecto de Agitación")
-        ax_ef_temp.grid(True)
-        ax_ef_temp.legend(fontsize=7)
-
-        img_ef_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        plt.savefig(img_ef_tmp.name, bbox_inches="tight", dpi=150)
-        plt.close(fig_ef_temp)
-
-        pdf.image(img_ef_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
-        pdf.ln(5)
 
     # 5. Gráfico de Extracción Relativa Corregida
     pdf.add_page()
@@ -405,4 +350,134 @@ if len(historial) > 0:
         rend_prom = np.mean(matriz_rend, axis=0)
 
         tm = np.diff(tiempo_muestreo)
-        c_diff = np.diff
+        c_diff = np.diff(conc_prom)
+        velocidad_promedio_grupo = c_diff / tm if np.all(tm > 0) else np.zeros_like(c_diff)
+
+        datos_agrupados[grupo] = {
+            "Tiempos": tiempo_muestreo,
+            "AbsProm": abs_prom,
+            "AbsStd": abs_std,
+            "ConcProm": conc_prom,
+            "ConcStd": conc_std,
+            "CV": cv_opcional,
+            "MasaProm": masa_prom,
+            "ExtProm": ext_prom,
+            "RendProm": rend_prom,
+            "VelocidadPromedio": velocidad_promedio_grupo,
+            "Corridas": corridas_grupo
+        }
+
+    # Botón de Descarga en barra lateral
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📄 Descarga de Informe")
+    try:
+        efecto_agitacion_datos_pdf = []
+        for fruta in frutas_base:
+            cond_con = f"{fruta} - Con Agitación"
+            cond_sin = f"{fruta} - Sin Agitación"
+            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
+                c_con_final = datos_agrupados[cond_con]["ConcProm"][-1]
+                c_sin_final = datos_agrupados[cond_sin]["ConcProm"][-1]
+                dif_abs = c_con_final - c_sin_final
+                dif_porc = (dif_abs / c_sin_final) * 100 if c_sin_final > 0 else 0.0
+                efecto_agitacion_datos_pdf.append({
+                    "Matriz / Fruta": fruta,
+                    "Conc. Final Con Agit. (g/L)": f"{c_con_final:.2f}",
+                    "Conc. Final Sin Agit. (g/L)": f"{c_sin_final:.2f}",
+                    "Diferencia Absoluta (g/L)": f"{dif_abs:.2f}",
+                    "Efecto Porcentual Agitación (%)": f"{dif_porc:.2f}%"
+                })
+
+        ruta_pdf = generar_pdf_informe(
+            datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos_pdf, tiempo_muestreo, frutas_base
+        )
+        with open(ruta_pdf, "rb") as archivo_pdf:
+            st.sidebar.download_button(
+                label="📥 Descargar Informe PDF Completo",
+                data=archivo_pdf,
+                file_name="informe_cinetica_completo.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+    except Exception as e:
+        st.sidebar.error(f"Error generando PDF: {e}")
+
+    tabs = st.tabs([f"🧪 {g}" for g in grupos_unicos] + ["📊 Tabla Global y Gráficos", "⚡ Velocidades & Efecto Agitación", "📈 Extracción Relativa (Erel)"])
+
+    for idx, grupo in enumerate(grupos_unicos):
+        d = datos_agrupados[grupo]
+        with tabs[idx]:
+            st.write(f"### Condición: **{grupo}** ({len(d['Corridas'])} réplica(s) agrupadas)")
+
+            st.write("#### Resumen Estadístico Completo")
+            tabla_resumen = {
+                "Tiempo (min)": [int(t) for t in tiempo_muestreo],
+                "ABS Prom ± SD": [f"{d['AbsProm'][i]:.3f} ± {d['AbsStd'][i]:.3f}" for i in range(len(tiempo_muestreo))],
+                "Conc. Promedio (g/L)": [f"{v:.2f}" for v in d["ConcProm"]],
+                "Desv. Estándar (± SD)": [f"{v:.2f}" for v in d["ConcStd"]],
+                "Coef. de Variación (CV %)": [f"{v:.2f}%" for v in d["CV"]],
+                "Masa Soluto Extractor (g)": [f"{v:.2f}" for v in d["MasaProm"]],
+                "Extracción Relativa Corr. (%)": [f"{v:.2f}%" for v in d["ExtProm"]],
+                "Rendimiento Aparente (%)": [f"{v:.2f}%" for v in d["RendProm"]],
+            }
+            st.dataframe(tabla_resumen, use_container_width=True)
+
+            st.write("#### Velocidad Promedio de Extracción por Intervalos")
+            if len(tiempo_muestreo) > 1:
+                tabla_2_datos = {
+                    "Intervalo de tiempo (min)": [f"{int(ti)} a {int(tf)}" for ti, tf in zip(tiempo_muestreo[:-1], tiempo_muestreo[1:])],
+                    "Velocidad promedio ((g/L)/min)": [f"{vm:.4f}" for vm in d["VelocidadPromedio"]]
+                }
+                st.dataframe(tabla_2_datos, use_container_width=True)
+
+            fig_g, ax_g = plt.subplots(figsize=(7, 4))
+            for c_item in d["Corridas"]:
+                ax_g.plot(tiempo_muestreo, c_item["Concentracion"], linestyle="--", alpha=0.4, label=f"R{c_item['ID_Replica']}")
+            
+            ax_g.errorbar(tiempo_muestreo, d["ConcProm"], yerr=d["ConcStd"], fmt="o-", color="black", linewidth=2, capsize=4, label="Promedio ± SD")
+            ax_g.set_xlabel("Tiempo (min)")
+            ax_g.set_ylabel("Concentración (g/L)")
+            ax_g.set_title(f"Cinética con Réplicas: {grupo}")
+            ax_g.grid(True)
+            ax_g.legend()
+            st.pyplot(fig_g)
+
+    # --- PANEL DE SELECCIÓN CON CHECKBOXES ---
+    st.markdown("---")
+    st.subheader("🎛️ Panel de Control de Visualización")
+    col_chk1, col_chk2 = st.columns(2)
+
+    with col_chk1:
+        st.markdown("##### 🔍 Réplicas Individuales")
+        corridas_seleccionadas = []
+        for item in historial:
+            if st.checkbox(item["EtiquetaCompleta"], value=False, key=f"chk_corrida_{item['EtiquetaCompleta']}"):
+                corridas_seleccionadas.append(item)
+
+    with col_chk2:
+        st.markdown("##### 📊 Promedios de Grupos")
+        grupos_seleccionados = []
+        for grupo in grupos_unicos:
+            if st.checkbox(f"Promedio: {grupo}", value=True, key=f"chk_grupo_{grupo}"):
+                grupos_seleccionados.append(grupo)
+
+    # Pestaña de Tabla Global y Gráfica Global
+    with tabs[len(grupos_unicos)]:
+        st.subheader("📋 Tabla Consolidada de Todos los Grupos")
+        tabla_global = {"Tiempo (min)": [int(t) for t in tiempo_muestreo]}
+        for grupo in grupos_unicos:
+            tabla_global[f"{grupo} (ABS Prom ± SD)"] = [f"{datos_agrupados[grupo]['AbsProm'][i]:.3f} ± {datos_agrupados[grupo]['AbsStd'][i]:.3f}" for i in range(len(tiempo_muestreo))]
+            tabla_global[f"{grupo} (g/L)"] = [f"{v:.2f}" for v in datos_agrupados[grupo]["ConcProm"]]
+            tabla_global[f"{grupo} (CV %)"] = [f"{v:.2f}%" for v in datos_agrupados[grupo]["CV"]]
+        st.dataframe(tabla_global, use_container_width=True)
+
+        st.markdown("---")
+        st.subheader("📈 Gráfica Global Comparativa")
+        
+        if len(grupos_seleccionados) > 0 or len(corridas_seleccionadas) > 0:
+            fig_glob, ax_glob = plt.subplots(figsize=(9, 5))
+            
+            for grupo in grupos_seleccionados:
+                d = datos_agrupados[grupo]
+                ax_glob.errorbar(
+                    d["Tiempos"],

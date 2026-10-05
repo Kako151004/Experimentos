@@ -390,4 +390,4 @@ if guardar_corrida:
             concentracion = (abs_exp - b) / m
             masa_aparente = concentracion * volumen_agua
             
-            c_ultimo = concentracion[-1] if len(concentracion) > 0 and concentracion else 1.0
+            c_ultimo = (concentracion[-1] if len(concentracion) > 0 and concentracion else 1.0)

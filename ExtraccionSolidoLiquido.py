@@ -5,11 +5,16 @@ from scipy.stats import linregress
 from fpdf import FPDF
 import streamlit as st
 
+# Configuración inicial de la página de Streamlit
 st.set_page_config(
-    page_title="Cinética de Extracción Sólido-Líquido", page_icon="🍇", layout="wide"
+    page_title="Cinética de Extracción Sólido-Líquido",
+    page_icon="🍇",
+    layout="wide"
 )
 
+# ==========================================
 # --- FUNCIÓN PARA GENERAR EL PDF COMPLETO ---
+# ==========================================
 def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos, tiempo_muestreo, frutas_base):
     pdf = FPDF()
     pdf.add_page()
@@ -17,7 +22,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
     pdf.cell(0, 10, "Informe Completo - Cinetica de Extraccion Solido-Liquido", ln=True, align="C")
     pdf.ln(2)
     
-    # 1. Parámetros Generales
+    # 1. Parámetros Generales y Calibración
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 6, "1. Parametros Generales y Calibracion:", ln=True)
     pdf.set_font("Arial", "", 9)
@@ -25,7 +30,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
     pdf.cell(0, 5, f"- Curva de Calibrado: y = {m:.4f}x + {b:.4f}  (R2 = {r2:.4f})", ln=True)
     pdf.ln(4)
     
-    # 2. Resultados por Condición
+    # 2. Resultados Estadísticos por Condición
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 6, "2. Resultados Estadisticos por Condicion (Absorbancia y Concentracion):", ln=True)
     
@@ -112,7 +117,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
         pdf.image(img_bar_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
         pdf.ln(5)
         
-    # 4. Análisis de Efecto de Agitación (Punto Final + Detalle por Tiempos)
+    # 4. Análisis de Efecto de Agitación
     if len(efecto_agitacion_datos) > 0:
         pdf.add_page()
         pdf.set_font("Arial", "B", 10)
@@ -214,7 +219,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
     pdf.image(img_er_tmp.name, x=15, y=pdf.get_y() + 2, w=170)
     pdf.ln(5)
 
-    # 6. Gráfica Global
+    # 6. Gráfica Global Comparativa
     pdf.add_page()
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 6, "6. Grafica Comparativa Global:", ln=True)
@@ -240,6 +245,10 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
     return tmp.name
 
 
+# ==========================================
+# --- APLICACIÓN PRINCIPAL STREAMLIT ---
+# ==========================================
+
 st.title("🍇 Cinética de Extracción y Curva de Calibrado")
 st.markdown(
     """
@@ -259,7 +268,7 @@ if "ListaCondiciones" not in st.session_state:
         "Naranja - Con Agitación", "Naranja - Sin Agitación"
     ]
 
-# --- PARÁMETROS GENERALES Y CALIBRACIÓN ---
+# --- PARÁMETROS GENERALES Y CALIBRACIÓN (BARRA LATERAL) ---
 st.sidebar.header("⚙ Parámetros Generales y Calibración")
 
 volumen_agua = st.sidebar.number_input(
@@ -281,7 +290,7 @@ input_abs_e = st.sidebar.text_area(
     "ABS estándar (600 nm)", "0.00 0.12 0.25 0.38 0.50"
 )
 
-# Procesar Calibración
+# Procesamiento de la Curva de Calibración
 try:
     tiempo_muestreo = np.array([float(x) for x in input_tiempos.split()])
     conc_e = np.array([float(x) for x in input_conc_e.split()])
@@ -312,7 +321,7 @@ try:
 except Exception as e:
     st.error(f"Error en los datos de calibración: {e}")
 
-# --- INGRESO DE DATOS EXPERIMENTALES ---
+# --- INGRESO DE DATOS EXPERIMENTALES (BARRA LATERAL) ---
 st.sidebar.markdown("---")
 st.sidebar.header("🧪 Ingreso de Réplicas")
 tipo_ingreso = st.sidebar.radio("Modo de Condición", ["Elegir existente", "Crear nueva condición"])
@@ -342,81 +351,3 @@ if limpiar_historial:
 
 if guardar_corrida:
     try:
-        abs_exp = np.array([float(x) for x in input_abs_exp.split()])
-
-        if len(abs_exp) != len(tiempo_muestreo):
-            st.sidebar.error("⚠️ La cantidad de valores de ABS experimental debe coincidir con los Tiempos de muestreo.")
-        else:
-            concentracion = (abs_exp - b) / m
-            masa_aparente = concentracion * volumen_agua
-            
-            c_ultimo = concentracion[-1] if len(concentracion) > 0 and concentracion[-1] > 0 else 1.0
-            extraccion_relativa = (concentracion / c_ultimo) * 100
-            rendimiento_aparente = (masa_aparente / masa_fruta) * 100 if masa_fruta > 0 else np.zeros_like(masa_aparente)
-
-            grupo_base = condicion_nombre.strip()
-            replicas_existentes = [item for item in st.session_state.HistorialExtraccion if item["Grupo"] == grupo_base]
-            num_replica = len(replicas_existentes) + 1
-
-            st.session_state.HistorialExtraccion.append(
-                {
-                    "Grupo": grupo_base,
-                    "ID_Replica": num_replica,
-                    "EtiquetaCompleta": f"{grupo_base} (R{num_replica})",
-                    "ABSExperimental": abs_exp,
-                    "Concentracion": concentracion,
-                    "MasaAparente": masa_aparente,
-                    "ExtraccionRelativa": extraccion_relativa,
-                    "RendimientoAparente": rendimiento_aparente,
-                }
-            )
-            st.sidebar.success(f"✅ Guardado: **{grupo_base}** (Réplica #{num_replica})")
-    except Exception as e:
-        st.sidebar.error(f"Error procesando datos: {e}")
-
-# --- AGRUPAR Y PROCESAR ESTADÍSTICAS ---
-historial = st.session_state.HistorialExtraccion
-
-if len(historial) > 0:
-    st.markdown("---")
-    st.subheader(f"📋 Panel de Resultados y Control ({len(historial)} registros totales)")
-
-    grupos_unicos = sorted(list(set(item["Grupo"] for item in historial)))
-    frutas_base = sorted(list(set([g.split(" - ")[0] for g in grupos_unicos if " - " in g])))
-    
-    datos_agrupados = {}
-    for grupo in grupos_unicos:
-        corridas_grupo = [item for item in historial if item["Grupo"] == grupo]
-        matriz_abs = np.array([c["ABSExperimental"] for c in corridas_grupo])
-        matriz_conc = np.array([c["Concentracion"] for c in corridas_grupo])
-        matriz_masa = np.array([c["MasaAparente"] for c in corridas_grupo])
-        matriz_ext = np.array([c["ExtraccionRelativa"] for c in corridas_grupo])
-        matriz_rend = np.array([c["RendimientoAparente"] for c in corridas_grupo])
-
-        abs_prom = np.mean(matriz_abs, axis=0)
-        abs_std = np.std(matriz_abs, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(abs_prom)
-
-        conc_prom = np.mean(matriz_conc, axis=0)
-        conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_prom)
-        cv_opcional = np.where(conc_prom > 0, (conc_std / conc_prom) * 100, 0.0)
-
-        masa_prom = np.mean(matriz_masa, axis=0)
-        ext_prom = np.mean(matriz_ext, axis=0)
-        rend_prom = np.mean(matriz_rend, axis=0)
-
-        tm = np.diff(tiempo_muestreo)
-        c_diff = np.diff(conc_prom)
-        velocidad_promedio_grupo = c_diff / tm if np.all(tm > 0) else np.zeros_like(c_diff)
-
-        datos_agrupados[grupo] = {
-            "Tiempos": tiempo_muestreo,
-            "AbsProm": abs_prom,
-            "AbsStd": abs_std,
-            "ConcProm": conc_prom,
-            "ConcStd": conc_std,
-            "CV": cv_opcional,
-            "MasaProm": masa_prom,
-            "ExtProm": ext_prom,
-            "RendProm": rend_prom,
-            "VelocidadPromedio": velocidad_promedio_grupo,
-            "

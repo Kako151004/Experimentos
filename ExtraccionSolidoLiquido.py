@@ -117,7 +117,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
         pdf.image(img_bar_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
         pdf.ln(5)
         
-    # 4. Análisis de Efecto de Agitación
+    # 4. Análisis de Efecto de Agitación (Punto Final, Porcentual y Diferencia de ABS)
     if len(efecto_agitacion_datos) > 0:
         pdf.add_page()
         pdf.set_font("Arial", "B", 10)
@@ -143,58 +143,58 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
             pdf.cell(30, 5, f"{ef['Efecto Porcentual Agitación (%)']}", 1, 1, "C")
         pdf.ln(4)
 
-        # 4.2 Tabla Detallada por Cada Tiempo de Muestreo
+        # 4.2 Tabla Detallada de Diferencia de ABS vs Tiempo
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 5, "Efecto de Agitacion Desglosado por Cada Tiempo de Muestreo:", ln=True)
+        pdf.cell(0, 5, "Diferencia de Absorbancia (delta ABS = ABS Con - ABS Sin) vs Tiempo:", ln=True)
         pdf.set_font("Arial", "B", 8)
         pdf.cell(45, 5, "Matriz / Fruta", 1, 0, "C")
         pdf.cell(25, 5, "Tiempo (min)", 1, 0, "C")
-        pdf.cell(35, 5, "Conc. Con Agit.", 1, 0, "C")
-        pdf.cell(35, 5, "Conc. Sin Agit.", 1, 0, "C")
-        pdf.cell(40, 5, "Efecto Agitación (%)", 1, 1, "C")
+        pdf.cell(35, 5, "ABS Con Agit.", 1, 0, "C")
+        pdf.cell(35, 5, "ABS Sin Agit.", 1, 0, "C")
+        pdf.cell(40, 5, "Dif. ABS (delta ABS)", 1, 1, "C")
 
         pdf.set_font("Arial", "", 8)
         for fruta in frutas_base:
             cond_con = f"{fruta} - Con Agitación"
             cond_sin = f"{fruta} - Sin Agitación"
             if cond_con in datos_agrupados and cond_sin in datos_agrupados:
-                c_con = datos_agrupados[cond_con]["ConcProm"]
-                c_sin = datos_agrupados[cond_sin]["ConcProm"]
-                efecto_t = np.where(c_sin > 0, ((c_con - c_sin) / c_sin) * 100, 0.0)
+                abs_con = datos_agrupados[cond_con]["AbsProm"]
+                abs_sin = datos_agrupados[cond_sin]["AbsProm"]
+                dif_abs_t = abs_con - abs_sin
                 for i, t in enumerate(tiempo_muestreo):
                     pdf.cell(45, 5, f"{fruta}", 1, 0, "L")
                     pdf.cell(25, 5, f"{int(t)}", 1, 0, "C")
-                    pdf.cell(35, 5, f"{c_con[i]:.2f}", 1, 0, "C")
-                    pdf.cell(35, 5, f"{c_sin[i]:.2f}", 1, 0, "C")
-                    pdf.cell(40, 5, f"{efecto_t[i]:.2f}%", 1, 1, "C")
+                    pdf.cell(35, 5, f"{abs_con[i]:.3f}", 1, 0, "C")
+                    pdf.cell(35, 5, f"{abs_sin[i]:.3f}", 1, 0, "C")
+                    pdf.cell(40, 5, f"{dif_abs_t[i]:.3f}", 1, 1, "C")
         pdf.ln(4)
 
-        # 4.3 Gráfico de Evolución Temporal
+        # 4.3 Gráfico de Diferencia de ABS vs Tiempo
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 6, "Efecto Porcentual de Agitacion (%) vs Tiempo:", ln=True)
+        pdf.cell(0, 6, "Grafico de Diferencia de ABS (delta ABS) vs Tiempo:", ln=True)
         pdf.ln(1)
 
-        fig_ef_temp, ax_ef_temp = plt.subplots(figsize=(7, 3.2))
+        fig_dabs_temp, ax_dabs_temp = plt.subplots(figsize=(7, 3.2))
         for fruta in frutas_base:
             cond_con = f"{fruta} - Con Agitación"
             cond_sin = f"{fruta} - Sin Agitación"
             if cond_con in datos_agrupados and cond_sin in datos_agrupados:
-                c_con = datos_agrupados[cond_con]["ConcProm"]
-                c_sin = datos_agrupados[cond_sin]["ConcProm"]
-                efecto_t = np.where(c_sin > 0, ((c_con - c_sin) / c_sin) * 100, 0.0)
-                ax_ef_temp.plot(tiempo_muestreo, efecto_t, marker="o", label=fruta)
+                abs_con = datos_agrupados[cond_con]["AbsProm"]
+                abs_sin = datos_agrupados[cond_sin]["AbsProm"]
+                dif_abs_t = abs_con - abs_sin
+                ax_dabs_temp.plot(tiempo_muestreo, dif_abs_t, marker="o", label=fruta)
 
-        ax_ef_temp.set_xlabel("Tiempo (min)")
-        ax_ef_temp.set_ylabel("Efecto de Agitación (%)")
-        ax_ef_temp.set_title("Evolución Temporal del Efecto de Agitación")
-        ax_ef_temp.grid(True)
-        ax_ef_temp.legend(fontsize=7)
+        ax_dabs_temp.set_xlabel("Tiempo (min)")
+        ax_dabs_temp.set_ylabel("Diferencia de ABS (Con - Sin)")
+        ax_dabs_temp.set_title("Evolución Temporal de la Diferencia de Absorbancia")
+        ax_dabs_temp.grid(True)
+        ax_dabs_temp.legend(fontsize=7)
 
-        img_ef_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        plt.savefig(img_ef_tmp.name, bbox_inches="tight", dpi=150)
-        plt.close(fig_ef_temp)
+        img_dabs_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        plt.savefig(img_dabs_tmp.name, bbox_inches="tight", dpi=150)
+        plt.close(fig_dabs_temp)
 
-        pdf.image(img_ef_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
+        pdf.image(img_dabs_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
         pdf.ln(5)
 
     # 5. Gráfico de Extracción Relativa Corregida
@@ -234,11 +234,24 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
     ax_temp.grid(True)
     ax_temp.legend(fontsize=7)
     
-    img_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    plt.savefig(img_tmp.name, bbox_inches="tight", dpi=150)
+    img_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") # .png for image embedding
+    # Let's fix extension to png for plt.savefig
     plt.close(fig_temp)
     
-    pdf.image(img_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
+    fig_temp2, ax_temp2 = plt.subplots(figsize=(7, 4))
+    for grupo, d in datos_agrupados.items():
+        ax_temp2.errorbar(d["Tiempos"], d["ConcProm"], yerr=d["ConcStd"], marker="o", capsize=3, label=grupo)
+    ax_temp2.set_xlabel("Tiempo (min)")
+    ax_temp2.set_ylabel("Concentracion (g/L)")
+    ax_temp2.set_title("Cinetica de Extraccion Global")
+    ax_temp2.grid(True)
+    ax_temp2.legend(fontsize=7)
+    
+    img_tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    plt.savefig(img_tmp_file.name, bbox_inches="tight", dpi=150)
+    plt.close(fig_temp2)
+    
+    pdf.image(img_tmp_file.name, x=15, y=pdf.get_y() + 2, w=180)
     
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     pdf.output(tmp.name)
@@ -575,7 +588,7 @@ if len(historial) > 0:
         else:
             st.warning("⚠️ Selecciona al menos un grupo o réplica en el panel superior.")
 
-    # Pestaña: Velocidades y Efecto de Agitación
+    # Pestaña: Velocidades y Efecto de Agitación (Incluye nueva tabla y gráfico de diferencia de ABS)
     with tabs[len(grupos_unicos) + 1]:
         st.subheader("⚡ Análisis de Efecto de Agitación")
         
@@ -606,55 +619,55 @@ if len(historial) > 0:
             st.info("💡 Para calcular automáticamente el efecto de la agitación, registra al menos una fruta con ambas condiciones.")
 
         st.markdown("---")
-        st.subheader("📋 Desglose Detallado del Efecto de Agitación por Cada Tiempo")
+        st.subheader("📋 Diferencia de Absorbancia ($\Delta$ABS = ABS Con - ABS Sin) vs Tiempo")
         
-        efecto_por_tiempo_datos = []
+        dif_abs_tiempo_datos = []
         for fruta in frutas_base:
             cond_con = f"{fruta} - Con Agitación"
             cond_sin = f"{fruta} - Sin Agitación"
             if cond_con in datos_agrupados and cond_sin in datos_agrupados:
-                c_con = datos_agrupados[cond_con]["ConcProm"]
-                c_sin = datos_agrupados[cond_sin]["ConcProm"]
-                efecto_t = np.where(c_sin > 0, ((c_con - c_sin) / c_sin) * 100, 0.0)
+                abs_con = datos_agrupados[cond_con]["AbsProm"]
+                abs_sin = datos_agrupados[cond_sin]["AbsProm"]
+                dif_abs_t = abs_con - abs_sin
                 
                 for i, t in enumerate(tiempo_muestreo):
-                    efecto_por_tiempo_datos.append({
+                    dif_abs_tiempo_datos.append({
                         "Matriz / Fruta": fruta,
                         "Tiempo (min)": int(t),
-                        "Conc. Con Agit. (g/L)": f"{c_con[i]:.2f}",
-                        "Conc. Sin Agit. (g/L)": f"{c_sin[i]:.2f}",
-                        "Efecto de Agitación (%)": f"{efecto_t[i]:.2f}%"
+                        "ABS Con Agit.": f"{abs_con[i]:.3f}",
+                        "ABS Sin Agit.": f"{abs_sin[i]:.3f}",
+                        "Dif. ABS ($\Delta$ABS)": f"{dif_abs_t[i]:.3f}"
                     })
 
-        if len(efecto_por_tiempo_datos) > 0:
-            st.dataframe(efecto_por_tiempo_datos, use_container_width=True)
+        if len(dif_abs_tiempo_datos) > 0:
+            st.dataframe(dif_abs_tiempo_datos, use_container_width=True)
         else:
-            st.info("💡 Registra parejas completas (Con y Sin agitación) para ver la tabla temporal detallada.")
+            st.info("💡 Registra parejas completas (Con y Sin agitación) para ver la tabla de diferencia de ABS.")
 
         st.markdown("---")
-        st.subheader("📈 Evolución Temporal del Efecto Porcentual de Agitación (%) vs Tiempo")
+        st.subheader("📈 Gráfico de Diferencia de ABS ($\Delta$ABS) vs Tiempo")
         if len(frutas_base) > 0:
-            fig_ef, ax_ef = plt.subplots(figsize=(9, 4.5))
-            hay_curvas_ef = False
+            fig_dabs, ax_dabs = plt.subplots(figsize=(9, 4.5))
+            hay_curvas_dabs = False
             for fruta in frutas_base:
                 cond_con = f"{fruta} - Con Agitación"
                 cond_sin = f"{fruta} - Sin Agitación"
                 if cond_con in datos_agrupados and cond_sin in datos_agrupados:
-                    c_con = datos_agrupados[cond_con]["ConcProm"]
-                    c_sin = datos_agrupados[cond_sin]["ConcProm"]
-                    efecto_t = np.where(c_sin > 0, ((c_con - c_sin) / c_sin) * 100, 0.0)
-                    ax_ef.plot(tiempo_muestreo, efecto_t, marker="o", linewidth=2, label=fruta)
-                    hay_curvas_ef = True
+                    abs_con = datos_agrupados[cond_con]["AbsProm"]
+                    abs_sin = datos_agrupados[cond_sin]["AbsProm"]
+                    dif_abs_t = abs_con - abs_sin
+                    ax_dabs.plot(tiempo_muestreo, dif_abs_t, marker="o", linewidth=2, label=fruta)
+                    hay_curvas_dabs = True
 
-            if hay_curvas_ef:
-                ax_ef.set_xlabel("Tiempo (min)")
-                ax_ef.set_ylabel("Efecto de Agitación (%)")
-                ax_ef.set_title("Efecto Porcentual de Agitación a lo largo del Tiempo")
-                ax_ef.grid(True)
-                ax_ef.legend()
-                st.pyplot(fig_ef)
+            if hay_curvas_dabs:
+                ax_dabs.set_xlabel("Tiempo (min)")
+                ax_dabs.set_ylabel("Diferencia de ABS ($\Delta$ABS = Con - Sin)")
+                ax_dabs.set_title("Evolución Temporal de la Diferencia de Absorbancia")
+                ax_dabs.grid(True)
+                ax_dabs.legend()
+                st.pyplot(fig_dabs)
             else:
-                st.info("💡 Registra parejas completas (Con y Sin agitación para una misma fruta) para trazar esta gráfica.")
+                st.info("💡 Registra parejas completas (Con y Sin agitación) para trazar esta gráfica.")
 
         st.markdown("---")
         st.subheader("📊 Comparación Gráfica de Velocidades Promedio")

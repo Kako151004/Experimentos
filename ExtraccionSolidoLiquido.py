@@ -4,6 +4,7 @@ import numpy as np
 from scipy.stats import linregress
 from fpdf import FPDF
 import streamlit as st
+import pandas as pd
 
 # Configuración inicial de la página de Streamlit
 st.set_page_config(
@@ -352,7 +353,7 @@ if guardar_corrida:
         abs_exp = np.array([float(x) for x in input_abs_exp.split()])
 
         if len(abs_exp) != len(tiempo_muestreo):
-            st.sidebar.error("⚠️ La cantidad de valores de ABS experimental debe coincidir con los Tiempos de muestreo.")
+            st.sidebar.error("⚠️️ La cantidad de valores de ABS experimental debe coincidir con los Tiempos de muestreo.")
         else:
             concentracion = (abs_exp - b) / m
             masa_aparente = concentracion * volumen_agua
@@ -382,6 +383,18 @@ if guardar_corrida:
         st.sidebar.error(f"Error procesando datos: {e}")
 
 # ==========================================
+# --- GESTIÓN Y ELIMINACIÓN DE RÉPLICAS ---
+# ==========================================
+if len(st.session_state.HistorialExtraccion) > 0:
+    with st.sidebar.expander("🛠️ Administrar / Borrar Réplicas"):
+        for i, item in enumerate(st.session_state.HistorialExtraccion):
+            cols_adm = st.columns([3, 1])
+            cols_adm[0].write(item["EtiquetaCompleta"])
+            if cols_adm[1].button("❌", key=f"del_rep_{i}"):
+                st.session_state.HistorialExtraccion.pop(i)
+                st.rerun()
+
+# ==========================================
 # --- AGRUPAR Y PROCESAR ESTADÍSTICAS ---
 # ==========================================
 historial = st.session_state.HistorialExtraccion
@@ -406,7 +419,7 @@ if len(historial) > 0:
         abs_std = np.std(matriz_abs, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(abs_prom)
 
         conc_prom = np.mean(matriz_conc, axis=0)
-        conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_prom) # Corregido aquí
+        conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_prom)
         cv_opcional = np.where(conc_prom > 0, (conc_std / conc_prom) * 100, 0.0)
 
         masa_prom = np.mean(matriz_masa, axis=0)
@@ -614,12 +627,12 @@ if len(historial) > 0:
                 abs_con = datos_agrupados[cond_con]["AbsProm"]
                 abs_sin = datos_agrupados[cond_sin]["AbsProm"]
                 dif_abs_t = abs_con - abs_sin
-                ax_dabs.plot(tiempo_muestreo, dif_abs_t, marker="o", label=f"$\Delta$ABS {fruta}")
+                ax_dabs.plot(tiempo_muestreo, dif_abs_t, marker="o", label=f"$\\Delta$ABS {fruta}")
                 hay_datos_dabs = True
         
         if hay_datos_dabs:
             ax_dabs.set_xlabel("Tiempo (min)")
-            ax_dabs.set_ylabel("$\Delta$ABS (Con - Sin)")
+            ax_dabs.set_ylabel("$\\Delta$ABS (Con - Sin)")
             ax_dabs.set_title("Evolución Temporal de la Diferencia de Absorbancia")
             ax_dabs.grid(True)
             ax_dabs.legend(fontsize=7)

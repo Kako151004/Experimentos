@@ -79,7 +79,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
             pdf.cell(24, 5, f"{d['RendProm'][i]:.2f}%", 1, 1, "C")
         pdf.ln(5)
 
-    # 3. Velocidades Promedio por Intervalos
+    # 3. Velocidades Promedio por Intervalos (con Gráfico de Barras en página exclusiva)
     if len(tiempo_muestreo) > 1:
         pdf.add_page()
         pdf.set_font("Arial", "B", 11)
@@ -104,7 +104,37 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
                 pdf.cell(70, 5, f"{vm:.4f}", 1, 1, "C")
             pdf.ln(3)
 
-    # 4. Análisis del Efecto de la Agitación (Temporal por cada tiempo y Punto Final)
+        # Gráfico de Barras de Velocidades Promedio (Página única y exclusiva)
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 11)
+        pdf.cell(0, 8, "Grafico de Velocidades Promedio por Intervalos", ln=True)
+        pdf.ln(3)
+
+        fig_vel, ax_vel = plt.subplots(figsize=(8, 4.5))
+        intervalos_str = [f"{int(tiempo_muestreo[i])}-{int(tiempo_muestreo[i+1])}" for i in range(len(tiempo_muestreo)-1)]
+        x_indices = np.arange(len(intervalos_str))
+        ancho_barra = 0.8 / max(1, len(datos_agrupados))
+
+        for idx, (grupo, d) in enumerate(datos_agrupados.items()):
+            offset = (idx - len(datos_agrupados)/2) * ancho_barra + ancho_barra/2
+            ax_vel.bar(x_indices + offset, d["VelocidadPromedio"], width=ancho_barra, label=grupo)
+
+        ax_vel.set_xlabel("Intervalos de Tiempo (min)")
+        ax_vel.set_ylabel("Velocidad Promedio ((g/L)/min)")
+        ax_vel.set_title("Comparativa de Velocidades de Extracción por Intervalos")
+        ax_vel.set_xticks(x_indices)
+        ax_vel.set_xticklabels(intervalos_str)
+        ax_vel.grid(True, axis="y")
+        ax_vel.legend(fontsize=6, bbox_to_anchor=(1.05, 1), loc='upper left')
+
+        img_vel_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        plt.savefig(img_vel_tmp.name, bbox_inches="tight", dpi=150)
+        plt.close(fig_vel)
+
+        pdf.image(img_vel_tmp.name, x=15, y=pdf.get_y() + 2, w=170)
+        pdf.ln(5)
+
+    # 4. Análisis del Efecto de la Agitación (Temporal y Final)
     if len(efecto_agitacion_temporal) > 0 or len(efecto_agitacion_datos) > 0:
         pdf.add_page()
         pdf.set_font("Arial", "B", 11)
@@ -383,7 +413,7 @@ if len(historial) > 0:
         abs_std = np.std(matriz_abs, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(abs_prom)
 
         conc_prom = np.mean(matriz_conc, axis=0)
-        conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_prom)
+        conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_std)
         cv_opcional = np.where(conc_prom > 0, (conc_std / conc_prom) * 100, 0.0)
 
         masa_prom = np.mean(matriz_masa, axis=0)
@@ -574,6 +604,28 @@ if len(historial) > 0:
 
     # Pestaña: Velocidades y Efecto de Agitación
     with tabs[len(grupos_unicos) + 1]:
+        st.subheader("⚡ Análisis de Velocidades Promedio por Intervalos")
+        if len(tiempo_muestreo) > 1:
+            fig_vel_web, ax_vel_web = plt.subplots(figsize=(8, 4))
+            intervalos_str = [f"{int(tiempo_muestreo[i])} a {int(tiempo_muestreo[i+1])}" for i in range(len(tiempo_muestreo)-1)]
+            x_indices = np.arange(len(intervalos_str))
+            ancho_barra = 0.8 / max(1, len(datos_agrupados))
+
+            for idx, (grupo, d) in enumerate(datos_agrupados.items()):
+                offset = (idx - len(datos_agrupados)/2) * ancho_barra + ancho_barra/2
+                ax_vel_web.bar(x_indices + offset, d["VelocidadPromedio"], width=ancho_barra, label=grupo)
+
+            ax_vel_web.set_xlabel("Intervalos de Tiempo (min)")
+            ax_vel_web.set_ylabel("Velocidad Promedio ((g/L)/min)")
+            ax_vel_web.set_title("Gráfico de Barras: Velocidad Promedio de Extracción")
+            ax_vel_web.set_xticks(x_indices)
+            ax_vel_web.set_xticklabels(intervalos_str)
+            ax_vel_web.grid(True, axis="y")
+            ax_vel_web.legend(fontsize=7, bbox_to_anchor=(1.05, 1), loc='upper left')
+            plt.tight_layout()
+            st.pyplot(fig_vel_web)
+
+        st.markdown("---")
         st.subheader("⚡ Análisis de Efecto de Agitación (Temporal y Final)")
         
         if len(efecto_agitacion_temporal_pdf) > 0:

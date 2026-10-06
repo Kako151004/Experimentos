@@ -183,33 +183,33 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
                 pdf.cell(30, 5, f"{ef['Efecto Porcentual Agitación (%)']}", 1, 1, "C")
             pdf.ln(5)
 
-        # Gráfico de Diferencia de ABS en página única y exclusiva
+        # Gráfico de Porcentaje de Efecto de Agitación vs Tiempo en página única y exclusiva
         pdf.add_page()
         pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 8, "Grafico de Diferencia de ABS (delta ABS) vs Tiempo", ln=True)
+        pdf.cell(0, 8, "Grafico de Porcentaje de Efecto de Agitacion (%) vs Tiempo", ln=True)
         pdf.ln(3)
 
-        fig_dabs_temp, ax_dabs_temp = plt.subplots(figsize=(8, 4))
+        fig_ef_temp, ax_ef_temp = plt.subplots(figsize=(8, 4))
         for fruta in frutas_base:
             cond_con = f"{fruta} - Con Agitación"
             cond_sin = f"{fruta} - Sin Agitación"
             if cond_con in datos_agrupados and cond_sin in datos_agrupados:
                 abs_con = datos_agrupados[cond_con]["AbsProm"]
                 abs_sin = datos_agrupados[cond_sin]["AbsProm"]
-                dif_abs_t = abs_con - abs_sin
-                ax_dabs_temp.plot(tiempo_muestreo, dif_abs_t, marker="o", label=fruta)
+                efecto_porc_t = np.where(abs_sin > 0, ((abs_con - abs_sin) / abs_sin) * 100, 0.0)
+                ax_ef_temp.plot(tiempo_muestreo, efecto_porc_t, marker="o", label=fruta)
 
-        ax_dabs_temp.set_xlabel("Tiempo (min)")
-        ax_dabs_temp.set_ylabel("Diferencia de ABS (Con - Sin)")
-        ax_dabs_temp.set_title("Evolución Temporal de la Diferencia de Absorbancia")
-        ax_dabs_temp.grid(True)
-        ax_dabs_temp.legend(fontsize=7)
+        ax_ef_temp.set_xlabel("Tiempo (min)")
+        ax_ef_temp.set_ylabel("Efecto de Agitación (%)")
+        ax_ef_temp.set_title("Evolución Temporal del Porcentaje de Efecto de Agitación")
+        ax_ef_temp.grid(True)
+        ax_ef_temp.legend(fontsize=7)
 
-        img_dabs_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        plt.savefig(img_dabs_tmp.name, bbox_inches="tight", dpi=150)
-        plt.close(fig_dabs_temp)
+        img_ef_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        plt.savefig(img_ef_tmp.name, bbox_inches="tight", dpi=150)
+        plt.close(fig_ef_temp)
 
-        pdf.image(img_dabs_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
+        pdf.image(img_ef_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
         pdf.ln(5)
 
     # 5. Gráfica Global Comparativa en página única y exclusiva
@@ -647,28 +647,28 @@ if len(historial) > 0:
             st.info("💡 Registra pares de condiciones para ver el resumen de punto final.")
 
         st.markdown("---")
-        st.subheader("📈 Gráfica de Diferencia de Absorbancia vs Tiempo")
-        fig_dabs, ax_dabs = plt.subplots(figsize=(8, 4))
-        hay_datos_dabs = False
+        st.subheader("📈 Gráfica de Porcentaje de Efecto de Agitación vs Tiempo")
+        fig_ef, ax_ef = plt.subplots(figsize=(8, 4))
+        hay_datos_ef = False
         for fruta in frutas_base:
             cond_con = f"{fruta} - Con Agitación"
             cond_sin = f"{fruta} - Sin Agitación"
             if cond_con in datos_agrupados and cond_sin in datos_agrupados:
                 abs_con = datos_agrupados[cond_con]["AbsProm"]
                 abs_sin = datos_agrupados[cond_sin]["AbsProm"]
-                dif_abs_t = abs_con - abs_sin
-                ax_dabs.plot(tiempo_muestreo, dif_abs_t, marker="o", label=f"$\\Delta$ABS {fruta}")
-                hay_datos_dabs = True
+                efecto_porc_t = np.where(abs_sin > 0, ((abs_con - abs_sin) / abs_sin) * 100, 0.0)
+                ax_ef.plot(tiempo_muestreo, efecto_porc_t, marker="o", label=f"Efecto % {fruta}")
+                hay_datos_ef = True
         
-        if hay_datos_dabs:
-            ax_dabs.set_xlabel("Tiempo (min)")
-            ax_dabs.set_ylabel("$\\Delta$ABS (Con - Sin)")
-            ax_dabs.set_title("Evolución Temporal de la Diferencia de Absorbancia")
-            ax_dabs.grid(True)
-            ax_dabs.legend(fontsize=7)
-            st.pyplot(fig_dabs)
+        if hay_datos_ef:
+            ax_ef.set_xlabel("Tiempo (min)")
+            ax_ef.set_ylabel("Efecto de Agitación (%)")
+            ax_ef.set_title("Evolución Temporal del Porcentaje de Efecto de Agitación")
+            ax_ef.grid(True)
+            ax_ef.legend(fontsize=7)
+            st.pyplot(fig_ef)
         else:
-            st.info("💡 Se necesitan pares de condiciones (Con y Sin agitación) para graficar las diferencias.")
+            st.info("💡 Se necesitan pares de condiciones (Con y Sin agitación) para graficar los porcentajes de efecto.")
 
     # Pestaña: Extracción Relativa (Erel %)
     with tabs[len(grupos_unicos) + 2]:

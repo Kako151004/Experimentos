@@ -210,7 +210,36 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
         pdf.image(img_abs_tmp.name, x=15, y=pdf.get_y() + 2, w=170)
         pdf.ln(5)
 
-        # Gráfico de Porcentaje de Efecto de Agitación vs Tiempo en página única y exclusiva
+        # Gráfico de Diferencia de Absorbancia (Delta ABS) vs Tiempo en PDF
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 11)
+        pdf.cell(0, 8, "Grafico de Diferencia de Absorbancia (Delta ABS) vs Tiempo", ln=True)
+        pdf.ln(3)
+
+        fig_dif_temp, ax_dif_temp = plt.subplots(figsize=(8, 4))
+        for fruta in frutas_base:
+            cond_con = f"{fruta} - Con Agitación"
+            cond_sin = f"{fruta} - Sin Agitación"
+            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
+                abs_con = datos_agrupados[cond_con]["AbsProm"]
+                abs_sin = datos_agrupados[cond_sin]["AbsProm"]
+                delta_abs = abs_con - abs_sin
+                ax_dif_temp.plot(tiempo_muestreo, delta_abs, marker="o", label=f"Delta ABS {fruta}")
+
+        ax_dif_temp.set_xlabel("Tiempo (min)")
+        ax_dif_temp.set_ylabel("Diferencia de Absorbancia ($\\Delta$ABS)")
+        ax_dif_temp.set_title("Evolución Temporal de la Diferencia de Absorbancia (Con - Sin)")
+        ax_dif_temp.grid(True)
+        ax_dif_temp.legend(fontsize=7)
+
+        img_dif_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        plt.savefig(img_dif_tmp.name, bbox_inches="tight", dpi=150)
+        plt.close(fig_dif_temp)
+
+        pdf.image(img_dif_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
+        pdf.ln(5)
+
+        # Gráfico de Porcentaje de Efecto de Agitación vs Tiempo en PDF
         pdf.add_page()
         pdf.set_font("Arial", "B", 11)
         pdf.cell(0, 8, "Grafico de Porcentaje de Efecto de Agitacion (%) vs Tiempo", ln=True)
@@ -694,7 +723,31 @@ if len(historial) > 0:
             plt.tight_layout()
             st.pyplot(fig_abs_web)
         else:
-            st.info("💡 Se necesitan pares de condiciones (Con y Sin agitación) para graficar la comparativa de absorbancias.")
+            st.info("💡 Se necesitan pares de condiciones para graficar la comparativa de absorbancias.")
+
+        st.markdown("---")
+        st.subheader("📈 Gráfica de Diferencia de Absorbancia ($\\Delta$ABS) vs Tiempo")
+        fig_dif_web, ax_dif_web = plt.subplots(figsize=(8, 4))
+        hay_datos_dif = False
+        for fruta in frutas_base:
+            cond_con = f"{fruta} - Con Agitación"
+            cond_sin = f"{fruta} - Sin Agitación"
+            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
+                abs_con = datos_agrupados[cond_con]["AbsProm"]
+                abs_sin = datos_agrupados[cond_sin]["AbsProm"]
+                delta_abs = abs_con - abs_sin
+                ax_dif_web.plot(tiempo_muestreo, delta_abs, marker="o", label=f"Delta ABS {fruta}")
+                hay_datos_dif = True
+        
+        if hay_datos_dif:
+            ax_dif_web.set_xlabel("Tiempo (min)")
+            ax_dif_web.set_ylabel("Diferencia de Absorbancia ($\\Delta$ABS)")
+            ax_dif_web.set_title("Evolución Temporal de la Diferencia de Absorbancia (Con - Sin)")
+            ax_dif_web.grid(True)
+            ax_dif_web.legend(fontsize=7)
+            st.pyplot(fig_dif_web)
+        else:
+            st.info("💡 Se necesitan pares de condiciones para graficar la diferencia de absorbancias.")
 
         st.markdown("---")
         st.subheader("📈 Gráfica de Porcentaje de Efecto de Agitación vs Tiempo")

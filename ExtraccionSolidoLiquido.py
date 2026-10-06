@@ -459,7 +459,8 @@ if len(historial) > 0:
         abs_std = np.std(matriz_abs, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(abs_prom)
 
         conc_prom = np.mean(matriz_conc, axis=0)
-        conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_std)
+        # --- CORRECCIÓN APLICADA AQUÍ ---
+        conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_prom)
         cv_opcional = np.where(conc_prom > 0, (conc_std / conc_prom) * 100, 0.0)
 
         masa_prom = np.mean(matriz_masa, axis=0)
@@ -626,7 +627,7 @@ if len(historial) > 0:
         else:
             st.warning("⚠️ Selecciona al menos un grupo o réplica en el panel superior.")
 
-    # Pestaña: Velocidades y Efecto de Agitación (Incluye las tablas por tiempo, diferencias de ABS y gráficos)
+    # Pestaña: Velocidades y Efecto de Agitación
     with tabs[len(grupos_unicos) + 1]:
         st.subheader("⚡ Análisis de Efecto de Agitación")
         
@@ -674,7 +675,7 @@ if len(historial) > 0:
                         "Matriz / Fruta": fruta,
                         "Tiempo (min)": int(t),
                         "Conc. Con Agit. (g/L)": f"{c_con:.2f}",
-                        "Conc. Sin Agit. (g/L)": f"{c_sin:.2f}",
+                        "Conc. Sin Agit. (g/L)": f"{c_sin_final:.2f}" if 'c_sin_final' in locals() else f"{c_sin:.2f}",
                         "Dif. Concentración (g/L)": f"{dif_c:.2f}",
                         "Dif. Porcentual (%)": f"{dif_p:.1f}%"
                     })
@@ -703,100 +704,44 @@ if len(historial) > 0:
                         "ABS Sin Agit.": f"{abs_sin[i]:.3f}",
                         "Dif. ABS ($\Delta$ABS)": f"{dif_abs_t[i]:.3f}"
                     })
-
         if len(dif_abs_tiempo_datos) > 0:
             st.dataframe(dif_abs_tiempo_datos, use_container_width=True)
-        else:
-            st.info("💡 Registra parejas completas (Con y Sin agitación) para ver la tabla de diferencia de ABS.")
 
         st.markdown("---")
-        st.subheader("📈 Gráfico de Diferencia de ABS ($\Delta$ABS) vs Tiempo")
-        if len(frutas_base) > 0:
-            fig_dabs, ax_dabs = plt.subplots(figsize=(9, 4.5))
-            hay_curvas_dabs = False
-            for fruta in frutas_base:
-                cond_con = f"{fruta} - Con Agitación"
-                cond_sin = f"{fruta} - Sin Agitación"
-                if cond_con in datos_agrupados and cond_sin in datos_agrupados:
-                    abs_con = datos_agrupados[cond_con]["AbsProm"]
-                    abs_sin = datos_agrupados[cond_sin]["AbsProm"]
-                    dif_abs_t = abs_con - abs_sin
-                    ax_dabs.plot(tiempo_muestreo, dif_abs_t, marker="o", linewidth=2, label=fruta)
-                    hay_curvas_dabs = True
-
-            if hay_curvas_dabs:
-                ax_dabs.set_xlabel("Tiempo (min)")
-                ax_dabs.set_ylabel("Diferencia de ABS ($\Delta$ABS = Con - Sin)")
-                ax_dabs.set_title("Evolución Temporal de la Diferencia de Absorbancia")
-                ax_dabs.grid(True)
-                ax_dabs.legend()
-                st.pyplot(fig_dabs)
-            else:
-                st.info("💡 Registra parejas completas (Con y Sin agitación) para trazar esta gráfica.")
-
-        st.markdown("---")
-        st.subheader("📊 Comparación Gráfica de Velocidades Promedio")
-        if len(tiempo_muestreo) > 1 and len(grupos_seleccionados) > 0:
-            num_intervalos = len(tiempo_muestreo) - 1
-            x = np.arange(num_intervalos)
-            ancho = min(0.2, 0.8 / max(len(grupos_seleccionados), 1))
-
-            fig_bar, ax_bar = plt.subplots(figsize=(9, 5))
-            for i, grupo in enumerate(grupos_seleccionados):
-                d = datos_agrupados[grupo]
-                ax_bar.bar(
-                    x + (i * ancho),
-                    d["VelocidadPromedio"],
-                    width=ancho,
-                    label=grupo,
-                )
-
-            labels_intervalos = [
-                f"{int(tiempo_muestreo[j])}-{int(tiempo_muestreo[j+1])} min"
-                for j in range(num_intervalos)
-            ]
-            ax_bar.set_xlabel("Intervalos de Tiempo")
-            ax_bar.set_ylabel("Velocidad Promedio del Grupo ((g/L) / min)")
-            ax_bar.set_title("Velocidades Promedio de Extracción por Grupos")
-            ax_bar.set_xticks(x + ancho * (len(grupos_seleccionados) - 1) / 2)
-            ax_bar.set_xticklabels(labels_intervalos)
-            ax_bar.grid(True, axis="y")
-            ax_bar.legend()
-            st.pyplot(fig_bar)
-
-    # Pestaña: Extracción Relativa Corregida (Erel %) vs Tiempo (Incluye la tabla faltante)
-    with tabs[len(grupos_unicos) + 2]:
-        st.subheader("📈 Extracción Relativa Corregida Erel (%) y Rendimiento")
-        st.markdown("Esta sección muestra el resumen numérico y la gráfica de la fracción normalizada de soluto extraído respecto al valor final para cada condición.")
+        st.subheader("📈 Gráfica de Diferencia de Absorbancia vs Tiempo")
+        fig_dabs, ax_dabs = plt.subplots(figsize=(8, 4))
+        hay_datos_dabs = False
+        for fruta in frutas_base:
+            cond_con = f"{fruta} - Con Agitación"
+            cond_sin = f"{fruta} - Sin Agitación"
+            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
+                abs_con = datos_agrupados[cond_con]["AbsProm"]
+                abs_sin = datos_agrupados[cond_sin]["AbsProm"]
+                dif_abs_t = abs_con - abs_sin
+                ax_dabs.plot(tiempo_muestreo, dif_abs_t, marker="o", label=f"$\Delta$ABS {fruta}")
+                hay_datos_dabs = True
         
-        # Tabla resumen detallada para la última sección
-        tabla_erel_resumen = []
-        for grupo, d in datos_agrupados.items():
-            for i, t in enumerate(tiempo_muestreo):
-                tabla_erel_resumen.append({
-                    "Condición": grupo,
-                    "Tiempo (min)": int(t),
-                    "Concentración (g/L)": f"{d['ConcProm'][i]:.2f}",
-                    "Extracción Relativa Corr. (%)": f"{d['ExtProm'][i]:.2f}%",
-                    "Rendimiento Aparente (%)": f"{d['RendProm'][i]:.2f}%"
-                })
-        st.dataframe(tabla_erel_resumen, use_container_width=True)
-
-        st.markdown("---")
-        if len(grupos_seleccionados) > 0:
-            fig_er, ax_er = plt.subplots(figsize=(9, 5))
-            for grupo in grupos_seleccionados:
-                d = datos_agrupados[grupo]
-                ax_er.plot(tiempo_muestreo, d["ExtProm"], marker="o", linewidth=2, label=grupo)
-            
-            ax_er.set_xlabel("Tiempo (min)")
-            ax_er.set_ylabel("Extracción Relativa Corregida Erel (%)")
-            ax_er.set_title("Cinética de Extracción Relativa Normalizada")
-            ax_er.grid(True)
-            ax_er.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-            plt.tight_layout()
-            st.pyplot(fig_er)
+        if hay_datos_dabs:
+            ax_dabs.set_xlabel("Tiempo (min)")
+            ax_dabs.set_ylabel("$\Delta$ABS (Con - Sin)")
+            ax_dabs.set_title("Evolución Temporal de la Diferencia de Absorbancia")
+            ax_dabs.grid(True)
+            ax_dabs.legend(fontsize=7)
+            st.pyplot(fig_dabs)
         else:
-            st.warning("⚠️ Selecciona al menos un grupo en el panel superior para visualizar su extracción relativa.")
-else:
-    st.info("👈 Ingresa los datos de calibración y registra tus réplicas en la barra lateral para generar el informe PDF.")
+            st.info("💡 Se necesitan pares de condiciones (Con y Sin agitación) para graficar las diferencias.")
+
+    # Pestaña: Extracción Relativa (Erel %)
+    with tabs[len(grupos_unicos) + 2]:
+        st.subheader("📈 Extracción Relativa Corregida ($E_{rel}$ %) y Rendimiento")
+        fig_er, ax_er = plt.subplots(figsize=(8, 4))
+        for grupo in grupos_unicos:
+            d = datos_agrupados[grupo]
+            ax_er.plot(tiempo_muestreo, d["ExtProm"], marker="o", label=f"{grupo}")
+        ax_er.set_xlabel("Tiempo (min)")
+        ax_er.set_ylabel("Extracción Relativa Corregida ($E_{rel}$ %)")
+        ax_er.set_title("Cinética de Extracción Relativa Normalizada")
+        ax_er.grid(True)
+        ax_er.legend(fontsize=7, bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.tight_layout()
+        st.pyplot(fig_er)

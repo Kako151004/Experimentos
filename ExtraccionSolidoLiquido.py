@@ -16,7 +16,7 @@ st.set_page_config(
 # ==========================================
 # --- FUNCIÓN PARA GENERAR EL PDF COMPLETO ---
 # ==========================================
-def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos, tiempo_muestreo, frutas_base):
+def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos, efecto_agitacion_temporal, tiempo_muestreo, frutas_base):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 14)
@@ -31,7 +31,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
     pdf.cell(0, 5, f"- Curva de Calibrado: y = {m:.4f}x + {b:.4f}  (R2 = {r2:.4f})", ln=True)
     pdf.ln(4)
     
-    # 2. Resultados Estadísticos por Condición (Con control de paginación para muchos datos)
+    # 2. Resultados Estadísticos por Condición
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 6, "2. Resultados Estadisticos por Condicion (Absorbancia y Concentracion):", ln=True)
     pdf.ln(2)
@@ -79,7 +79,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
             pdf.cell(24, 5, f"{d['RendProm'][i]:.2f}%", 1, 1, "C")
         pdf.ln(5)
 
-    # 3. Velocidades Promedio por Intervalos y Gráfico de Barras
+    # 3. Velocidades Promedio por Intervalos
     if len(tiempo_muestreo) > 1:
         pdf.add_page()
         pdf.set_font("Arial", "B", 11)
@@ -104,68 +104,54 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
                 pdf.cell(70, 5, f"{vm:.4f}", 1, 1, "C")
             pdf.ln(3)
 
-        # Gráfico de Velocidades en página nueva limpia
+    # 4. Análisis del Efecto de la Agitación (Temporal por cada tiempo y Punto Final)
+    if len(efecto_agitacion_temporal) > 0 or len(efecto_agitacion_datos) > 0:
         pdf.add_page()
         pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 8, "Grafico de Velocidades Promedio de Extraccion", ln=True)
-        pdf.ln(3)
-
-        num_intervalos = len(tiempo_muestreo) - 1
-        x = np.arange(num_intervalos)
-        ancho = min(0.2, 0.8 / max(len(datos_agrupados), 1))
-
-        fig_bar_temp, ax_bar_temp = plt.subplots(figsize=(8, 4))
-        for i, (grupo, d) in enumerate(datos_agrupados.items()):
-            ax_bar_temp.bar(
-                x + (i * ancho),
-                d["VelocidadPromedio"],
-                width=ancho,
-                label=grupo,
-            )
-
-        labels_intervalos = [
-            f"{int(tiempo_muestreo[j])}-{int(tiempo_muestreo[j+1])}m"
-            for j in range(num_intervalos)
-        ]
-        ax_bar_temp.set_xlabel("Intervalos de Tiempo")
-        ax_bar_temp.set_ylabel("Velocidad ((g/L)/min)")
-        ax_bar_temp.set_title("Velocidades Promedio de Extraccion")
-        ax_bar_temp.set_xticks(x + ancho * (len(datos_agrupados) - 1) / 2)
-        ax_bar_temp.set_xticklabels(labels_intervalos, fontsize=6, rotation=45)
-        ax_bar_temp.grid(True, axis="y")
-        ax_bar_temp.legend(fontsize=7)
-        
-        img_bar_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        plt.savefig(img_bar_tmp.name, bbox_inches="tight", dpi=150)
-        plt.close(fig_bar_temp)
-        
-        pdf.image(img_bar_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
-        pdf.ln(5)
-        
-    # 4. Análisis de Efecto de Agitación
-    if len(efecto_agitacion_datos) > 0:
-        pdf.add_page()
-        pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 8, "4. Analisis del Efecto de la Agitacion", ln=True)
+        pdf.cell(0, 8, "4. Analisis del Efecto de la Agitacion (Temporal y Final)", ln=True)
         pdf.ln(2)
         
-        pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 6, "Resumen Punto Final:", ln=True)
-        pdf.set_font("Arial", "B", 8)
-        pdf.cell(45, 5, "Matriz / Fruta", 1, 0, "C")
-        pdf.cell(35, 5, "Conc. Con Agit.", 1, 0, "C")
-        pdf.cell(35, 5, "Conc. Sin Agit.", 1, 0, "C")
-        pdf.cell(35, 5, "Dif. Absoluta", 1, 0, "C")
-        pdf.cell(30, 5, "Efecto (%)", 1, 1, "C")
-        
-        pdf.set_font("Arial", "", 8)
-        for ef in efecto_agitacion_datos:
-            pdf.cell(45, 5, f"{ef['Matriz / Fruta']}", 1, 0, "L")
-            pdf.cell(35, 5, f"{ef['Conc. Final Con Agit. (g/L)']}", 1, 0, "C")
-            pdf.cell(35, 5, f"{ef['Conc. Final Sin Agit. (g/L)']}", 1, 0, "C")
-            pdf.cell(35, 5, f"{ef['Diferencia Absoluta (g/L)']}", 1, 0, "C")
-            pdf.cell(30, 5, f"{ef['Efecto Porcentual Agitación (%)']}", 1, 1, "C")
-        pdf.ln(5)
+        if len(efecto_agitacion_temporal) > 0:
+            pdf.set_font("Arial", "B", 9)
+            pdf.cell(0, 6, "Diferencias de ABS y Efecto de Agitacion por Tiempo:", ln=True)
+            pdf.set_font("Arial", "B", 7)
+            pdf.cell(35, 5, "Fruta / Matriz", 1, 0, "C")
+            pdf.cell(20, 5, "Tiempo (m)", 1, 0, "C")
+            pdf.cell(30, 5, "ABS Con Agit.", 1, 0, "C")
+            pdf.cell(30, 5, "ABS Sin Agit.", 1, 0, "C")
+            pdf.cell(30, 5, "Dif. Delta ABS", 1, 0, "C")
+            pdf.cell(30, 5, "Efecto Agit.(%)", 1, 1, "C")
+            
+            pdf.set_font("Arial", "", 7)
+            for et in efecto_agitacion_temporal:
+                if pdf.get_y() > 275:
+                    pdf.add_page()
+                pdf.cell(35, 5, f"{et['Fruta']}", 1, 0, "L")
+                pdf.cell(20, 5, f"{et['Tiempo']}", 1, 0, "C")
+                pdf.cell(30, 5, f"{et['ABS Con']:.3f}", 1, 0, "C")
+                pdf.cell(30, 5, f"{et['ABS Sin']:.3f}", 1, 0, "C")
+                pdf.cell(30, 5, f"{et['Delta ABS']:.3f}", 1, 0, "C")
+                pdf.cell(30, 5, f"{et['Efecto (%)']:.1f}%", 1, 1, "C")
+            pdf.ln(4)
+
+        if len(efecto_agitacion_datos) > 0:
+            pdf.set_font("Arial", "B", 9)
+            pdf.cell(0, 6, "Resumen Punto Final:", ln=True)
+            pdf.set_font("Arial", "B", 8)
+            pdf.cell(45, 5, "Matriz / Fruta", 1, 0, "C")
+            pdf.cell(35, 5, "Conc. Con Agit.", 1, 0, "C")
+            pdf.cell(35, 5, "Conc. Sin Agit.", 1, 0, "C")
+            pdf.cell(35, 5, "Dif. Absoluta", 1, 0, "C")
+            pdf.cell(30, 5, "Efecto (%)", 1, 1, "C")
+            
+            pdf.set_font("Arial", "", 8)
+            for ef in efecto_agitacion_datos:
+                pdf.cell(45, 5, f"{ef['Matriz / Fruta']}", 1, 0, "L")
+                pdf.cell(35, 5, f"{ef['Conc. Final Con Agit. (g/L)']}", 1, 0, "C")
+                pdf.cell(35, 5, f"{ef['Conc. Final Sin Agit. (g/L)']}", 1, 0, "C")
+                pdf.cell(35, 5, f"{ef['Diferencia Absoluta (g/L)']}", 1, 0, "C")
+                pdf.cell(30, 5, f"{ef['Efecto Porcentual Agitación (%)']}", 1, 1, "C")
+            pdf.ln(5)
 
         # Gráfico de Diferencia de ABS en página nueva
         pdf.add_page()
@@ -196,32 +182,10 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
         pdf.image(img_dabs_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
         pdf.ln(5)
 
-    # 5. Extracción Relativa Corregida (Erel %)
+    # 5. Gráfica Global Comparativa
     pdf.add_page()
     pdf.set_font("Arial", "B", 11)
-    pdf.cell(0, 8, "5. Extraccion Relativa Corregida (Erel %) y Rendimiento", ln=True)
-    pdf.ln(3)
-
-    fig_er_temp, ax_er_temp = plt.subplots(figsize=(8, 4.5))
-    for grupo, d in datos_agrupados.items():
-        ax_er_temp.plot(tiempo_muestreo, d["ExtProm"], marker="o", label=grupo)
-    ax_er_temp.set_xlabel("Tiempo (min)")
-    ax_er_temp.set_ylabel("Extracción Relativa Corregida Erel (%)")
-    ax_er_temp.set_title("Cinética de Extracción Relativa Normalizada")
-    ax_er_temp.grid(True)
-    ax_er_temp.legend(fontsize=7, bbox_to_anchor=(1.05, 1), loc='upper left')
-
-    img_er_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    plt.savefig(img_er_tmp.name, bbox_inches="tight", dpi=150)
-    plt.close(fig_er_temp)
-
-    pdf.image(img_er_tmp.name, x=15, y=pdf.get_y() + 2, w=170)
-    pdf.ln(5)
-
-    # 6. Gráfica Global Comparativa
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 11)
-    pdf.cell(0, 8, "6. Grafica Comparativa Global", ln=True)
+    pdf.cell(0, 8, "5. Grafica Comparativa Global", ln=True)
     pdf.ln(3)
     
     fig_temp2, ax_temp2 = plt.subplots(figsize=(8, 4.5))
@@ -353,7 +317,7 @@ if guardar_corrida:
         abs_exp = np.array([float(x) for x in input_abs_exp.split()])
 
         if len(abs_exp) != len(tiempo_muestreo):
-            st.sidebar.error("⚠️️ La cantidad de valores de ABS experimental debe coincidir con los Tiempos de muestreo.")
+            st.sidebar.error("⚠ La cantidad de valores de ABS experimental debe coincidir con los Tiempos de muestreo.")
         else:
             concentracion = (abs_exp - b) / m
             masa_aparente = concentracion * volumen_agua
@@ -386,7 +350,7 @@ if guardar_corrida:
 # --- GESTIÓN Y ELIMINACIÓN DE RÉPLICAS ---
 # ==========================================
 if len(st.session_state.HistorialExtraccion) > 0:
-    with st.sidebar.expander("🛠️ Administrar / Borrar Réplicas"):
+    with st.sidebar.expander("🛠️️ Administrar / Borrar Réplicas"):
         for i, item in enumerate(st.session_state.HistorialExtraccion):
             cols_adm = st.columns([3, 1])
             cols_adm[0].write(item["EtiquetaCompleta"])
@@ -444,29 +408,51 @@ if len(historial) > 0:
             "Corridas": corridas_grupo
         }
 
+    # Preparar datos de agitación temporal para la barra lateral y PDF
+    efecto_agitacion_temporal_pdf = []
+    for fruta in frutas_base:
+        cond_con = f"{fruta} - Con Agitación"
+        cond_sin = f"{fruta} - Sin Agitación"
+        if cond_con in datos_agrupados and cond_sin in datos_agrupados:
+            abs_con_arr = datos_agrupados[cond_con]["AbsProm"]
+            abs_sin_arr = datos_agrupados[cond_sin]["AbsProm"]
+            for idx_t, t_val in enumerate(tiempo_muestreo):
+                ac = abs_con_arr[idx_t]
+                as_ = abs_sin_arr[idx_t]
+                delta = ac - as_
+                efecto_porc = (delta / as_) * 100 if as_ > 0 else 0.0
+                efecto_agitacion_temporal_pdf.append({
+                    "Fruta": fruta,
+                    "Tiempo": int(t_val),
+                    "ABS Con": ac,
+                    "ABS Sin": as_,
+                    "Delta ABS": delta,
+                    "Efecto (%)": efecto_porc
+                })
+
+    efecto_agitacion_datos_pdf = []
+    for fruta in frutas_base:
+        cond_con = f"{fruta} - Con Agitación"
+        cond_sin = f"{fruta} - Sin Agitación"
+        if cond_con in datos_agrupados and cond_sin in datos_agrupados:
+            c_con_final = datos_agrupados[cond_con]["ConcProm"][-1]
+            c_sin_final = datos_agrupados[cond_sin]["ConcProm"][-1]
+            dif_abs = c_con_final - c_sin_final
+            dif_porc = (dif_abs / c_sin_final) * 100 if c_sin_final > 0 else 0.0
+            efecto_agitacion_datos_pdf.append({
+                "Matriz / Fruta": fruta,
+                "Conc. Final Con Agit. (g/L)": f"{c_con_final:.2f}",
+                "Conc. Final Sin Agit. (g/L)": f"{c_sin_final:.2f}",
+                "Diferencia Absoluta (g/L)": f"{dif_abs:.2f}",
+                "Efecto Porcentual Agitación (%)": f"{dif_porc:.2f}%"
+            })
+
     # Botón de Descarga en Barra Lateral
     st.sidebar.markdown("---")
     st.sidebar.subheader("📄 Descarga de Informe")
     try:
-        efecto_agitacion_datos_pdf = []
-        for fruta in frutas_base:
-            cond_con = f"{fruta} - Con Agitación"
-            cond_sin = f"{fruta} - Sin Agitación"
-            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
-                c_con_final = datos_agrupados[cond_con]["ConcProm"][-1]
-                c_sin_final = datos_agrupados[cond_sin]["ConcProm"][-1]
-                dif_abs = c_con_final - c_sin_final
-                dif_porc = (dif_abs / c_sin_final) * 100 if c_sin_final > 0 else 0.0
-                efecto_agitacion_datos_pdf.append({
-                    "Matriz / Fruta": fruta,
-                    "Conc. Final Con Agit. (g/L)": f"{c_con_final:.2f}",
-                    "Conc. Final Sin Agit. (g/L)": f"{c_sin_final:.2f}",
-                    "Diferencia Absoluta (g/L)": f"{dif_abs:.2f}",
-                    "Efecto Porcentual Agitación (%)": f"{dif_porc:.2f}%"
-                })
-
         ruta_pdf = generar_pdf_informe(
-            datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos_pdf, tiempo_muestreo, frutas_base
+            datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efecto_agitacion_datos_pdf, efecto_agitacion_temporal_pdf, tiempo_muestreo, frutas_base
         )
         with open(ruta_pdf, "rb") as archivo_pdf:
             st.sidebar.download_button(
@@ -586,35 +572,28 @@ if len(historial) > 0:
         else:
             st.warning("⚠️ Selecciona al menos un grupo o réplica en el panel superior.")
 
-    # Pestaña: Velocidades y Efecto de Agitación
+    # Pestaña: Velocidades y Efecto de Agitación (Con tabla temporal detallada por tiempo)
     with tabs[len(grupos_unicos) + 1]:
-        st.subheader("⚡ Análisis de Efecto de Agitación")
+        st.subheader("⚡ Análisis de Efecto de Agitación (Temporal y Final)")
         
-        efecto_agitacion_datos = []
-        for fruta in frutas_base:
-            cond_con = f"{fruta} - Con Agitación"
-            cond_sin = f"{fruta} - Sin Agitación"
-            
-            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
-                c_con_final = datos_agrupados[cond_con]["ConcProm"][-1]
-                c_sin_final = datos_agrupados[cond_sin]["ConcProm"][-1]
-                
-                dif_abs = c_con_final - c_sin_final
-                dif_porc = (dif_abs / c_sin_final) * 100 if c_sin_final > 0 else 0.0
-                
-                efecto_agitacion_datos.append({
-                    "Matriz / Fruta": fruta,
-                    "Conc. Final Con Agit. (g/L)": f"{c_con_final:.2f}",
-                    "Conc. Final Sin Agit. (g/L)": f"{c_sin_final:.2f}",
-                    "Diferencia Absoluta (g/L)": f"{dif_abs:.2f}",
-                    "Efecto Porcentual Agitación (%)": f"{dif_porc:.2f}%"
-                })
-        
-        if len(efecto_agitacion_datos) > 0:
-            st.markdown("##### Resumen Final (Punto Final)")
-            st.dataframe(efecto_agitacion_datos, use_container_width=True)
+        if len(efecto_agitacion_temporal_pdf) > 0:
+            st.markdown("##### 🕒 Diferencia de Absorbancia ($\\Delta$ABS) y Efecto Porcentual para Cada Tiempo")
+            df_agit_temp = pd.DataFrame(efecto_agitacion_temporal_pdf)
+            # Formatear columnas numéricas para visualización limpia
+            df_agit_temp["ABS Con"] = df_agit_temp["ABS Con"].map(lambda x: f"{x:.3f}")
+            df_agit_temp["ABS Sin"] = df_agit_temp["ABS Sin"].map(lambda x: f"{x:.3f}")
+            df_agit_temp["Delta ABS"] = df_agit_temp["Delta ABS"].map(lambda x: f"{x:.3f}")
+            df_agit_temp["Efecto (%)"] = df_agit_temp["Efecto (%)"].map(lambda x: f"{x:.1f}%")
+            st.dataframe(df_agit_temp, use_container_width=True)
         else:
-            st.info("💡 Para calcular automáticamente el efecto de la agitación, registra al menos una fruta con ambas condiciones.")
+            st.info("💡 Para mostrar la tabla temporal de agitación, registra al menos una fruta con ambas condiciones ('Con Agitación' y 'Sin Agitación').")
+
+        st.markdown("---")
+        st.markdown("##### 📌 Resumen Punto Final")
+        if len(efecto_agitacion_datos_pdf) > 0:
+            st.dataframe(efecto_agitacion_datos_pdf, use_container_width=True)
+        else:
+            st.info("💡 Registra pares de condiciones para ver el resumen de punto final.")
 
         st.markdown("---")
         st.subheader("📈 Gráfica de Diferencia de Absorbancia vs Tiempo")

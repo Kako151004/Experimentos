@@ -153,7 +153,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
                 pdf.cell(30, 5, f"{ef['Efecto Porcentual Agitación (%)']}", 1, 1, "C")
             pdf.ln(5)
 
-        # Gráfico de Diferencia de ABS en página nueva
+        # Gráfico de Diferencia de ABS en página única y exclusiva
         pdf.add_page()
         pdf.set_font("Arial", "B", 11)
         pdf.cell(0, 8, "Grafico de Diferencia de ABS (delta ABS) vs Tiempo", ln=True)
@@ -182,7 +182,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
         pdf.image(img_dabs_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
         pdf.ln(5)
 
-    # 5. Gráfica Global Comparativa
+    # 5. Gráfica Global Comparativa en página única y exclusiva
     pdf.add_page()
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "5. Grafica Comparativa Global", ln=True)
@@ -350,7 +350,7 @@ if guardar_corrida:
 # --- GESTIÓN Y ELIMINACIÓN DE RÉPLICAS ---
 # ==========================================
 if len(st.session_state.HistorialExtraccion) > 0:
-    with st.sidebar.expander("🛠️️ Administrar / Borrar Réplicas"):
+    with st.sidebar.expander("🛠 Administrar / Borrar Réplicas"):
         for i, item in enumerate(st.session_state.HistorialExtraccion):
             cols_adm = st.columns([3, 1])
             cols_adm[0].write(item["EtiquetaCompleta"])
@@ -572,14 +572,13 @@ if len(historial) > 0:
         else:
             st.warning("⚠️ Selecciona al menos un grupo o réplica en el panel superior.")
 
-    # Pestaña: Velocidades y Efecto de Agitación (Con tabla temporal detallada por tiempo)
+    # Pestaña: Velocidades y Efecto de Agitación
     with tabs[len(grupos_unicos) + 1]:
         st.subheader("⚡ Análisis de Efecto de Agitación (Temporal y Final)")
         
         if len(efecto_agitacion_temporal_pdf) > 0:
             st.markdown("##### 🕒 Diferencia de Absorbancia ($\\Delta$ABS) y Efecto Porcentual para Cada Tiempo")
             df_agit_temp = pd.DataFrame(efecto_agitacion_temporal_pdf)
-            # Formatear columnas numéricas para visualización limpia
             df_agit_temp["ABS Con"] = df_agit_temp["ABS Con"].map(lambda x: f"{x:.3f}")
             df_agit_temp["ABS Sin"] = df_agit_temp["ABS Sin"].map(lambda x: f"{x:.3f}")
             df_agit_temp["Delta ABS"] = df_agit_temp["Delta ABS"].map(lambda x: f"{x:.3f}")

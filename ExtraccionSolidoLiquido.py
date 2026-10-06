@@ -117,7 +117,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
         pdf.image(img_bar_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
         pdf.ln(5)
         
-    # 4. Análisis de Efecto de Agitación (Punto Final, Porcentual y Diferencia de ABS)
+    # 4. Análisis de Efecto de Agitación (Punto Final, Tabla por Tiempos, Diferencia de ABS y Gráfico)
     if len(efecto_agitacion_datos) > 0:
         pdf.add_page()
         pdf.set_font("Arial", "B", 10)
@@ -143,7 +143,38 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
             pdf.cell(30, 5, f"{ef['Efecto Porcentual Agitación (%)']}", 1, 1, "C")
         pdf.ln(4)
 
-        # 4.2 Tabla Detallada de Diferencia de ABS vs Tiempo
+        # 4.2 Tabla de Concentraciones y Agitación para cada Tiempo
+        pdf.set_font("Arial", "B", 9)
+        pdf.cell(0, 5, "Efecto de Agitacion por cada Tiempo de Muestreo:", ln=True)
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(40, 5, "Matriz / Fruta", 1, 0, "C")
+        pdf.cell(20, 5, "T (min)", 1, 0, "C")
+        pdf.cell(32, 5, "Conc. Con Agit.", 1, 0, "C")
+        pdf.cell(32, 5, "Conc. Sin Agit.", 1, 0, "C")
+        pdf.cell(30, 5, "Dif. Conc.", 1, 0, "C")
+        pdf.cell(30, 5, "Dif. Porc. (%)", 1, 1, "C")
+
+        pdf.set_font("Arial", "", 8)
+        for fruta in frutas_base:
+            cond_con = f"{fruta} - Con Agitación"
+            cond_sin = f"{fruta} - Sin Agitación"
+            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
+                conc_con = datos_agrupados[cond_con]["ConcProm"]
+                conc_sin = datos_agrupados[cond_sin]["ConcProm"]
+                for i, t in enumerate(tiempo_muestreo):
+                    c_con = conc_con[i]
+                    c_sin = conc_sin[i]
+                    dif_c = c_con - c_sin
+                    dif_p = (dif_c / c_sin) * 100 if c_sin > 0 else 0.0
+                    pdf.cell(40, 5, f"{fruta}", 1, 0, "L")
+                    pdf.cell(20, 5, f"{int(t)}", 1, 0, "C")
+                    pdf.cell(32, 5, f"{c_con:.2f}", 1, 0, "C")
+                    pdf.cell(32, 5, f"{c_sin:.2f}", 1, 0, "C")
+                    pdf.cell(30, 5, f"{dif_c:.2f}", 1, 0, "C")
+                    pdf.cell(30, 5, f"{dif_p:.1f}%", 1, 1, "C")
+        pdf.ln(4)
+
+        # 4.3 Tabla Detallada de Diferencia de ABS vs Tiempo
         pdf.set_font("Arial", "B", 9)
         pdf.cell(0, 5, "Diferencia de Absorbancia (delta ABS = ABS Con - ABS Sin) vs Tiempo:", ln=True)
         pdf.set_font("Arial", "B", 8)
@@ -169,7 +200,7 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
                     pdf.cell(40, 5, f"{dif_abs_t[i]:.3f}", 1, 1, "C")
         pdf.ln(4)
 
-        # 4.3 Gráfico de Diferencia de ABS vs Tiempo
+        # 4.4 Gráfico de Diferencia de ABS vs Tiempo
         pdf.set_font("Arial", "B", 10)
         pdf.cell(0, 6, "Grafico de Diferencia de ABS (delta ABS) vs Tiempo:", ln=True)
         pdf.ln(1)
@@ -197,13 +228,33 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
         pdf.image(img_dabs_tmp.name, x=15, y=pdf.get_y() + 2, w=180)
         pdf.ln(5)
 
-    # 5. Gráfico de Extracción Relativa Corregida
+    # 5. Gráfico y Tabla de Extracción Relativa Corregida (Erel %)
     pdf.add_page()
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 6, "5. Extraccion Relativa Corregida (Erel %) vs Tiempo:", ln=True)
+    pdf.cell(0, 6, "5. Extraccion Relativa Corregida (Erel %) y Rendimiento:", ln=True)
     pdf.ln(2)
 
-    fig_er_temp, ax_er_temp = plt.subplots(figsize=(7, 3.8))
+    # Tabla Resumen de Extracción Relativa y Rendimiento en la última sección
+    pdf.set_font("Arial", "B", 9)
+    pdf.cell(0, 5, "Tabla Resumen de Extraccion Relativa y Rendimiento Aparente:", ln=True)
+    pdf.set_font("Arial", "B", 8)
+    pdf.cell(50, 5, "Condicion", 1, 0, "C")
+    pdf.cell(25, 5, "Tiempo (min)", 1, 0, "C")
+    pdf.cell(35, 5, "Conc. (g/L)", 1, 0, "C")
+    pdf.cell(35, 5, "Extraccion Rel. (%)", 1, 0, "C")
+    pdf.cell(35, 5, "Rendimiento (%)", 1, 1, "C")
+
+    pdf.set_font("Arial", "", 8)
+    for grupo, d in datos_agrupados.items():
+        for i, t in enumerate(tiempo_muestreo):
+            pdf.cell(50, 5, f"{grupo}", 1, 0, "L")
+            pdf.cell(25, 5, f"{int(t)}", 1, 0, "C")
+            pdf.cell(35, 5, f"{d['ConcProm'][i]:.2f}", 1, 0, "C")
+            pdf.cell(35, 5, f"{d['ExtProm'][i]:.2f}%", 1, 0, "C")
+            pdf.cell(35, 5, f"{d['RendProm'][i]:.2f}%", 1, 1, "C")
+    pdf.ln(4)
+
+    fig_er_temp, ax_er_temp = plt.subplots(figsize=(7, 3.5))
     for grupo, d in datos_agrupados.items():
         ax_er_temp.plot(tiempo_muestreo, d["ExtProm"], marker="o", label=grupo)
     ax_er_temp.set_xlabel("Tiempo (min)")
@@ -224,19 +275,6 @@ def generar_pdf_informe(datos_agrupados, m, b, r2, volumen_agua, masa_fruta, efe
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 6, "6. Grafica Comparativa Global:", ln=True)
     pdf.ln(2)
-    
-    fig_temp, ax_temp = plt.subplots(figsize=(7, 4))
-    for grupo, d in datos_agrupados.items():
-        ax_temp.errorbar(d["Tiempos"], d["ConcProm"], yerr=d["ConcStd"], marker="o", capsize=3, label=grupo)
-    ax_temp.set_xlabel("Tiempo (min)")
-    ax_temp.set_ylabel("Concentracion (g/L)")
-    ax_temp.set_title("Cinetica de Extraccion Global")
-    ax_temp.grid(True)
-    ax_temp.legend(fontsize=7)
-    
-    img_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") # .png for image embedding
-    # Let's fix extension to png for plt.savefig
-    plt.close(fig_temp)
     
     fig_temp2, ax_temp2 = plt.subplots(figsize=(7, 4))
     for grupo, d in datos_agrupados.items():
@@ -421,7 +459,7 @@ if len(historial) > 0:
         abs_std = np.std(matriz_abs, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(abs_prom)
 
         conc_prom = np.mean(matriz_conc, axis=0)
-        conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_prom)
+        conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_std)
         cv_opcional = np.where(conc_prom > 0, (conc_std / conc_prom) * 100, 0.0)
 
         masa_prom = np.mean(matriz_masa, axis=0)
@@ -588,7 +626,7 @@ if len(historial) > 0:
         else:
             st.warning("⚠️ Selecciona al menos un grupo o réplica en el panel superior.")
 
-    # Pestaña: Velocidades y Efecto de Agitación (Incluye nueva tabla y gráfico de diferencia de ABS)
+    # Pestaña: Velocidades y Efecto de Agitación (Incluye las tablas por tiempo, diferencias de ABS y gráficos)
     with tabs[len(grupos_unicos) + 1]:
         st.subheader("⚡ Análisis de Efecto de Agitación")
         
@@ -617,6 +655,33 @@ if len(historial) > 0:
             st.dataframe(efecto_agitacion_datos, use_container_width=True)
         else:
             st.info("💡 Para calcular automáticamente el efecto de la agitación, registra al menos una fruta con ambas condiciones.")
+
+        st.markdown("---")
+        st.subheader("📋 Efecto de Agitación por cada Tiempo de Muestreo")
+        tabla_agitacion_tiempos = []
+        for fruta in frutas_base:
+            cond_con = f"{fruta} - Con Agitación"
+            cond_sin = f"{fruta} - Sin Agitación"
+            if cond_con in datos_agrupados and cond_sin in datos_agrupados:
+                conc_con = datos_agrupados[cond_con]["ConcProm"]
+                conc_sin = datos_agrupados[cond_sin]["ConcProm"]
+                for i, t in enumerate(tiempo_muestreo):
+                    c_con = conc_con[i]
+                    c_sin = conc_sin[i]
+                    dif_c = c_con - c_sin
+                    dif_p = (dif_c / c_sin) * 100 if c_sin > 0 else 0.0
+                    tabla_agitacion_tiempos.append({
+                        "Matriz / Fruta": fruta,
+                        "Tiempo (min)": int(t),
+                        "Conc. Con Agit. (g/L)": f"{c_con:.2f}",
+                        "Conc. Sin Agit. (g/L)": f"{c_sin:.2f}",
+                        "Dif. Concentración (g/L)": f"{dif_c:.2f}",
+                        "Dif. Porcentual (%)": f"{dif_p:.1f}%"
+                    })
+        if len(tabla_agitacion_tiempos) > 0:
+            st.dataframe(tabla_agitacion_tiempos, use_container_width=True)
+        else:
+            st.info("💡 Registra parejas completas (Con y Sin agitación) para ver la tabla detallada por tiempos.")
 
         st.markdown("---")
         st.subheader("📋 Diferencia de Absorbancia ($\Delta$ABS = ABS Con - ABS Sin) vs Tiempo")
@@ -699,11 +764,25 @@ if len(historial) > 0:
             ax_bar.legend()
             st.pyplot(fig_bar)
 
-    # Pestaña: Extracción Relativa Corregida (Erel %) vs Tiempo
+    # Pestaña: Extracción Relativa Corregida (Erel %) vs Tiempo (Incluye la tabla faltante)
     with tabs[len(grupos_unicos) + 2]:
-        st.subheader("📈 Extracción Relativa Corregida Erel (%) vs Tiempo")
-        st.markdown("Esta gráfica muestra la fracción normalizada de soluto extraído respecto al valor final para cada condición experimental.")
+        st.subheader("📈 Extracción Relativa Corregida Erel (%) y Rendimiento")
+        st.markdown("Esta sección muestra el resumen numérico y la gráfica de la fracción normalizada de soluto extraído respecto al valor final para cada condición.")
         
+        # Tabla resumen detallada para la última sección
+        tabla_erel_resumen = []
+        for grupo, d in datos_agrupados.items():
+            for i, t in enumerate(tiempo_muestreo):
+                tabla_erel_resumen.append({
+                    "Condición": grupo,
+                    "Tiempo (min)": int(t),
+                    "Concentración (g/L)": f"{d['ConcProm'][i]:.2f}",
+                    "Extracción Relativa Corr. (%)": f"{d['ExtProm'][i]:.2f}%",
+                    "Rendimiento Aparente (%)": f"{d['RendProm'][i]:.2f}%"
+                })
+        st.dataframe(tabla_erel_resumen, use_container_width=True)
+
+        st.markdown("---")
         if len(grupos_seleccionados) > 0:
             fig_er, ax_er = plt.subplots(figsize=(9, 5))
             for grupo in grupos_seleccionados:

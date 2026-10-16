@@ -61,7 +61,7 @@ if len(st.session_state.HistorialCalibrado) >0:
     PromedioABSE = np.mean(AbsEM, axis = 0)
     
     st.write(f"**Número de réplicas acumuladas:** {len(st.session_state.HistorialCalibrado)}")
-    st.write("**Promedio de Absorbancias:**", PromedioABS)
+    st.write("**Promedio de Absorbancias:**", PromedioABSE)
     
     m, b, r ,_ ,_ = linregress(ConcC, PromedioABSE)
     R2 = r**2

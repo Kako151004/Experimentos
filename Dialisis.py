@@ -47,7 +47,7 @@ if guardar_ABS_estandar:
             st.error("La cantidad de valores en Concentraciónes y ABS deben ser iguales")
         else:
             st.session_state.HistorialCalibrado.append({"ConcE":conc_e, "ABSE":abs_e })
-            st.success(f"Replica #{len(st.session_state.HistorailCalibrado)}guardada con exito")
+            st.success(f"Replica #{len(st.session_state.HistorialCalibrado)} guardada con exito")
     except ValueError:
         st.error("introduce los valores separados por espacios")
 

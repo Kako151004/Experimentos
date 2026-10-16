@@ -68,7 +68,7 @@ if len(st.session_state.HistorialCalibrado) >0:
     ]
     
     df_calibrado = pd.DataFrame({"Concentración (mg/mL)": ConcC, "Promedio +- SD": abs_con_sd })
-    st.dataframe(df_calibracion, use_container_width=True)
+    st.dataframe(df_calibrado, use_container_width=True)
     
     st.write(f"**Número de réplicas acumuladas:** {len(st.session_state.HistorialCalibrado)}")
     

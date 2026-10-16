@@ -70,7 +70,7 @@ if len(st.session_state.HistorialCalibrado) >0:
     st.session_state.HistorialDialisis.append({"PromedioAbsE": PromedioABSE, "pendiente": m, "intercepto": b})
     
     fig, ax = plt.subplots(figsize=(6, 4))
-    ax.plot(ConcentraciónCalibrado, PromedioABS, marker='o', color='green', label=Ecuación)
+    ax.plot(ConcC, PromedioABSE, marker='o', color='green', label=Ecuación)
     ax.set_title("Curva de calibrado")
     ax.set_xlabel('Concentración (mg/mL)')
     ax.set_ylabel('Absorbancia 600')

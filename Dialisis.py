@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import linregress
 import streamlit as st
+import pandas as pd
 
 
 
@@ -29,7 +30,7 @@ tiempos_input = st.sidebar.text_input("Tiempos de muestreo (separados por espaci
 st.sidebar.markdown("---")
 st.sidebar.subheader("Datos de Calibrado")
 input_conc_e = st.sidebar.text_area("Concentración estándar (mg/mL)","0 1 2 3 4 5 6")
-input_abs_e = st.sidebar.text_area("ABS estándar (600 nm)", "")
+input_abs_e = st.sidebar.text_area("ABS estándar (600 nm)", "0.017 0.11 0.201 0.291 0.389 0.477 0.568")
 
 col_b1, col_b2 = st.sidebar.columns(2)
 guardar_ABS_estandar = col_b1.button("Guardar Replica Estandar")
@@ -59,15 +60,24 @@ if len(st.session_state.HistorialCalibrado) >0:
     AbsEM = np.array([item["ABSE"] for item in st.session_state.HistorialCalibrado])
     ConcC = ConcentracionEM[-1]
     PromedioABSE = np.mean(AbsEM, axis = 0)
+    DesviacionABSE = np.std(AbsEM, axis=0, ddof=1) if len(AbsEM) > 1 else np.zeros_like(PromedioABSE)
+    
+    abs_con_sd = [
+        f"{p:.4f} +- {s:.4f}" if len(AbsEM) > 1 else f"{p:.4f} (n=1)"
+        for p, s in zip(PromedioABSE, DesviacionABSE)
+    ]
+    
+    df_calibrado = pd.DataFrame({"Concentración (mg/mL)": ConcC, "Promedio +- SD": abs_con_sd })
+    st.dataframe(df_calibracion, use_container_width=True)
     
     st.write(f"**Número de réplicas acumuladas:** {len(st.session_state.HistorialCalibrado)}")
-    st.write("**Promedio de Absorbancias:**", PromedioABSE)
+    
     
     m, b, r ,_ ,_ = linregress(ConcC, PromedioABSE)
     R2 = r**2
     Ecuación = f"A = {m:.4f}*C+{b:.4f}  |   R2 = {R2:.4f}"
     
-    st.session_state.HistorialDialisis.append({"PromedioAbsE": PromedioABSE, "pendiente": m, "intercepto": b})
+    st.session_state.HistorialCalibrado.append({"PromedioAbsE": PromedioABSE, "pendiente": m, "intercepto": b})
     
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.plot(ConcC, PromedioABSE, marker='o', color='green', label=Ecuación)

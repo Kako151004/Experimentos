@@ -469,7 +469,7 @@ if len(historial) > 0:
         abs_std = np.std(matriz_abs, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(abs_prom)
 
         conc_prom = np.mean(matriz_conc, axis=0)
-        conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(conc_std)
+        conc_std = np.std(matriz_conc, axis=0, ddof=1) if len(corridas_grupo) > 1 else np.zeros_like(np.mean(matriz_conc, axis=0))
         cv_opcional = np.where(conc_prom > 0, (conc_std / conc_prom) * 100, 0.0)
 
         masa_prom = np.mean(matriz_masa, axis=0)

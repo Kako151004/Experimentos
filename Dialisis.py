@@ -65,7 +65,7 @@ if len(st.session_state.HistorialCalibrado) >0:
     
     m, b, r ,_ ,_ = linregress(ConcC, PromedioABSE)
     R2 = r**2
-    Ecuación = f"A = {m:.4f}*C+{b:.4f}  |   R2 = {R2:.ef}"
+    Ecuación = f"A = {m:.4f}*C+{b:.4f}  |   R2 = {R2:.4f}"
     
     st.session_state.HistorialDialisis.append({"PromedioAbsE": PromedioABSE, "pendiente": m, "intercepto": b})
     

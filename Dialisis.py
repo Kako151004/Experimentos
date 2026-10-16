@@ -90,6 +90,6 @@ if len(st.session_state.HistorialCalibrado) >0:
     
     # Mostrar el gráfico en Streamlit
     st.pyplot(fig)
-    except ValueError:
-        st.error("Error: Asegúrate de que todas las réplicas tengan exactamente el mismo número de valores de absorbancia y concentración. Pulsa 'Limpiar todo' si necesitas reiniciar los datos.")
+except ValueError:
+    st.error("Error: Asegúrate de que todas las réplicas tengan exactamente el mismo número de valores de absorbancia y concentración. Pulsa 'Limpiar todo' si necesitas reiniciar los datos.")
     

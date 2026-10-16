@@ -51,45 +51,57 @@ if guardar_ABS_estandar:
             st.success(f"Replica #{len(st.session_state.HistorialCalibrado)} guardada con exito")
     except ValueError:
         st.error("introduce los valores separados por espacios")
-
-if len(st.session_state.HistorialCalibrado) >0:
+if len(st.session_state.HistorialCalibrado) > 0:
     st.markdown("---")
     st.subheader("Resultados de calibrado")
     
-    ConcentracionEM = np.array([item["ConcE"] for item in st.session_state.HistorialCalibrado])
-    AbsEM = np.array([item["ABSE"] for item in st.session_state.HistorialCalibrado])
-    ConcC = ConcentracionEM[-1]
-    PromedioABSE = np.mean(AbsEM, axis = 0)
-    DesviacionABSE = np.std(AbsEM, axis=0, ddof=1) if len(AbsEM) > 1 else np.zeros_like(PromedioABSE)
-    
-    abs_con_sd = [
-        f"{p:.4f} +- {s:.4f}" if len(AbsEM) > 1 else f"{p:.4f} (n=1)"
-        for p, s in zip(PromedioABSE, DesviacionABSE)
-    ]
-    
-    df_calibrado = pd.DataFrame({"Concentración (mg/mL)": ConcC, "Promedio +- SD": abs_con_sd })
-    st.write(f"**Número de réplicas acumuladas:** {len(st.session_state.HistorialCalibrado)}")
-    st.dataframe(df_calibrado, use_container_width=True)
-    
-   
-    
-    
-    m, b, r ,_ ,_ = linregress(ConcC, PromedioABSE)
-    R2 = r**2
-    Ecuación = f"A = {m:.4f}*C+{b:.4f}  |   R2 = {R2:.4f}"
-    
-    st.session_state.HistorialCalibrado.append({"PromedioAbsE": PromedioABSE, "pendiente": m, "intercepto": b})
-    
-    fig, ax = plt.subplots(figsize=(6, 4))
-    ax.plot(ConcC, PromedioABSE, marker='o', color='green', label=Ecuación)
-    ax.set_title("Curva de calibrado")
-    ax.set_xlabel('Concentración (mg/mL)')
-    ax.set_ylabel('Absorbancia 600')
-    ax.grid(True)
-    ax.legend()
-    
-    # Mostrar el gráfico en Streamlit
-    st.pyplot(fig)
-except ValueError:
-    st.error("Error: Asegúrate de que todas las réplicas tengan exactamente el mismo número de valores de absorbancia y concentración. Pulsa 'Limpiar todo' si necesitas reiniciar los datos.")
-    
+    try:
+        # Extraemos de forma segura
+        ConcentracionEM = [item["ConcE"] for item in st.session_state.HistorialCalibrado]
+        AbsEM = [item["ABSE"] for item in st.session_state.HistorialCalibrado]
+        
+        # Tomamos la última concentración introducida
+        ConcC = ConcentracionEM[-1]
+        
+        # Validamos que todas las réplicas tengan la misma cantidad de puntos
+        abs_matriz = np.array(AbsEM)
+        
+        # Promedio y Desviación Estándar
+        PromedioABSE = np.mean(abs_matriz, axis=0)
+        DesviacionABSE = np.std(abs_matriz, axis=0, ddof=1) if len(AbsEM) > 1 else np.zeros_like(PromedioABSE)
+        
+        st.write(f"**Número de réplicas acumuladas:** {len(st.session_state.HistorialCalibrado)}")
+        
+        # 📌 Unir promedio y desviación estándar
+        abs_con_sd = [
+            f"{p:.4f} ± {s:.4f}" if len(AbsEM) > 1 else f"{p:.4f} (n=1)"
+            for p, s in zip(PromedioABSE, DesviacionABSE)
+        ]
+        
+        df_calibracion = pd.DataFrame({
+            "Concentración (mg/mL)": ConcC,
+            "Absorbancia (Promedio ± SD)": abs_con_sd
+        })
+        st.dataframe(df_calibracion, use_container_width=True)
+        
+        # Regresión lineal
+        m, b, r, _, _ = linregress(ConcC, PromedioABSE)
+        R2 = r**2
+        Ecuación = f"A = {m:.4f}*C + {b:.4f}  |  R² = {R2:.4f}"
+        
+        st.session_state.Pendiente = m
+        st.session_state.Intercepto = b
+        
+        # Gráfico
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.errorbar(ConcC, PromedioABSE, yerr=DesviacionABSE, fmt='o', color='green', ecolor='gray', capsize=4, label=Ecuación)
+        ax.set_title("Curva de calibrado")
+        ax.set_xlabel('Concentración (mg/mL)')
+        ax.set_ylabel('Absorbancia 600')
+        ax.grid(True)
+        ax.legend()
+        
+        st.pyplot(fig)
+        
+    except ValueError:
+        st.error("Error: Asegúrate de que todas las réplicas tengan exactamente el mismo número de valores de absorbancia y concentración. Pulsa 'Limpiar todo' si necesitas reiniciar los datos.")

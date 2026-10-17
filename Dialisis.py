@@ -219,7 +219,38 @@ if len(historial)>0:
             ax_g.grid(True)
             ax_g.legend()
             st.pyplot(fig_g)
-                
+    st.markdown("---")
+    st.subheader("Panel de control de visualización")
+    col_chk1, col_chk2 =st.columns(2)
     
-        
+    with col_chk1:
+        st.markdown("##### Replicas individuales")
+        corridas_seleccionadas= []
+        for item in historial:
+            if st.checkbox(item["EtiquetaCompletas"],value=False,key=f"chk_corrida_{item['EtiquetaCompleta']}"):
+                corridas_seleccionadas.append(item)
+    with col_chk2:
+        st.markdow("##### Promedios de Grupos")
+        grupos_seleccionados = []
+        for grupo in grupos_unicos:
+            if st.checkbox(f"Promedio: {grupo}",value=True, key=f"chk_grupo_{grupo}"):
+                grupos_seleccionados.append(grupo)
     
+    with tabs[len(grupos_unicos)]:
+        st.subheader("Gráfica global comparativa")
+        if len(grupos_seleccionados)>0 or len(corridas_seleccionadas)>0:
+            fig_glob,ax_glob = plt.subplots(figsize=(9,5))
+            for grupo in grupos_seleccionados:
+                d=datos_agrupados[grupo]
+                ax_glob.errorbar(d["Tiempo"],d["ConcProm"],yerr=d["ConcStd"],marker="o",capsize=4,linewidth=2,label=f"Promedio:{grupo}")
+            for c_item in corridas_seleccionadas:
+                ax_glob.plot(tiempos_muestreo,c_item["Concentracion"], linestyle=":", alpha=0.6, marker="x", label=f"Réplica: {c_item['EtiquetaCompleta']}")
+            ax_glob.set_xlabel("Tiempo (min)")
+            ax_glob.set_ylabel("Concentración (mg/mL)")
+            ax_glob.set_title("Comparativa global")
+            ax_glob.grid(True)
+            ax_glob.legend(bbox_to_anchor=(1.05,1),loc='upper left')
+            plt.tight_layout()
+            st.pyplot(fig:glob)
+        else:
+            st.warninf("Selecciona al menos un grupo o réplica en el panel superior.")

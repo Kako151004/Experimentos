@@ -242,7 +242,7 @@ if len(historial)>0:
             fig_glob,ax_glob = plt.subplots(figsize=(9,5))
             for grupo in grupos_seleccionados:
                 d=datos_agrupados[grupo]
-                ax_glob.errorbar(d["Tiempo"],d["ConcProm"],yerr=d["ConcStd"],marker="o",capsize=4,linewidth=2,label=f"Promedio:{grupo}")
+                ax_glob.errorbar(d['tiempos_muestreo'],d["ConcProm"],yerr=d["ConcStd"],marker="o",capsize=4,linewidth=2,label=f"Promedio:{grupo}")
             for c_item in corridas_seleccionadas:
                 ax_glob.plot(tiempos_muestreo,c_item["Concentracion"], linestyle=":", alpha=0.6, marker="x", label=f"Réplica: {c_item['EtiquetaCompleta']}")
             ax_glob.set_xlabel("Tiempo (min)")

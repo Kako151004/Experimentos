@@ -124,9 +124,9 @@ else:
 
 input_abs_exp = st.sidebar.text_area("ABS experimental (600 nm) (separados por espacios)", " 0.024 0.064 0.102 0.14 0.158 0.222 0.294 0.345")
 
-col_exp1, col_exp2 = st.sidebar.columns(2)
+col_exp1, col_exp2= st.sidebar.columns(2)
 guardar_corrida1 = col_exp1.button("Guardar Replica")
-limpiar_historial2 = col_exp2.button("Limpiar todo")
+limpiar_historial2 = col_exp2.button("Limpiar Dialisis")
 
 if limpiar_historial2:
     st.session_state.HistorialDialisis = []

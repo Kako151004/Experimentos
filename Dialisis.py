@@ -230,7 +230,7 @@ if len(historial)>0:
             if st.checkbox(item["EtiquetaCompleta"],value=False,key=f"chk_corrida_{item['EtiquetaCompleta']}"):
                 corridas_seleccionadas.append(item)
     with col_chk2:
-        st.markdow("##### Promedios de Grupos")
+        st.markdown("##### Promedios de Grupos")
         grupos_seleccionados = []
         for grupo in grupos_unicos:
             if st.checkbox(f"Promedio: {grupo}",value=True, key=f"chk_grupo_{grupo}"):

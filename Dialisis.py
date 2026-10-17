@@ -28,7 +28,7 @@ if "ListaCondiciones" not in st.session_state:
 st.sidebar.header("Parametros y curva de calibrado")
 Volumen_agua = st.sidebar.number_input("Volumen agua (mL)", value = 1.00, format = "%.5f")
 tiempos_input = st.sidebar.text_input("Tiempos de muestreo (separados por espacios)(min): ", value = "0 5 10 15 20 30 45 60")
-tiempos_muestreo = np.array([float(x) dor x in tiempos_input.split()])
+tiempos_muestreo = np.array([float(x) for x in tiempos_input.split()])
 st.sidebar.markdown("---")
 st.sidebar.subheader("Datos de Calibrado")
 input_conc_e = st.sidebar.text_area("Concentración estándar (mg/mL)","0 1 2 3 4 5 6")

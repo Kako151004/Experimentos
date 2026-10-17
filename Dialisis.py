@@ -139,7 +139,10 @@ if guardar_corrida1:
         if len(abs_exp) != len(tiempos_muestreo):
             st.sidebar.error("La cantidad de valores de ABS deben ser iguales a las del Tiempo")
         else:
-            concentracion = (abs_exp-b)/m
+            m_cal = st.session_state.Pendiente
+            b_cal = st.session_state.Intercepto
+            
+            concentracion = (abs_exp-b_cal)/m_cal
             masa_aparente = concentracion * Volumen_agua
             c_ultimo = concentracion[-1] if len(concentracion) > 0 and concentracion[-1] > 0 else 1.0
             fraccion_relativa = ((concentracion-concentracion[0])/(c_ultimo-concentracion[0]))*100

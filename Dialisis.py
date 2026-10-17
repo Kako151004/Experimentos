@@ -251,6 +251,6 @@ if len(historial)>0:
             ax_glob.grid(True)
             ax_glob.legend(bbox_to_anchor=(1.05,1),loc='upper left')
             plt.tight_layout()
-            st.pyplot(fig:glob)
+            st.pyplot(fig_glob)
         else:
             st.warninf("Selecciona al menos un grupo o réplica en el panel superior.")

@@ -212,7 +212,7 @@ if len(historial)>0:
             fig_g, ax_g = plt.subplots(figsize=(7,4))
             for c_item in d["Corridas"]:
                 ax_g.plot(tiempos_muestreo, c_item['ConcProm'], linestyle = "--", alpha=0.4, label=f"R{c_item["ID_Replica"]}")
-            ax_g.errorbar(tiempos_muestreo, d["ConcProm"], yerr = d["ConcStd"], fmt ="o-", color="black", linewidth=2, capsize=4,label="Promedio +- SD")
+            ax_g.errorbar(tiempos_muestreo, d["Concentracion"], yerr = d["ConcStd"], fmt ="o-", color="black", linewidth=2, capsize=4,label="Promedio +- SD")
             ax_g.set_xlabel("Tiempo (min)")
             ax_g.set_ylabel("Concentracion (mg/mL)")
             ax_g.set_title(f"Cinética con Réplicas: {grupo}")

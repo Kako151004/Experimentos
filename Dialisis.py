@@ -165,7 +165,7 @@ if len(historial)>0:
     st.subheader(f"Panel de resultados y control ({len(historial)}) registros totales")
     
     grupos_unicos = sorted(list(set(item["Grupo"] for item in historial)))
-    Temperatura_base = sorted(list(set([g.split(" - ")[0] for g in grupos unicos if " - " in g])))
+    Temperatura_base = sorted(list(set([g.split(" - ")[0] for g in grupos_unicos if " - " in g])))
     
     datos_agrupados = {}
     for grupo in grupos_unicos:

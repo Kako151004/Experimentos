@@ -109,7 +109,7 @@ if len(st.session_state.HistorialCalibrado) > 0:
         st.error("Error: Asegúrate de que todas las réplicas tengan exactamente el mismo número de valores de absorbancia y concentración. Pulsa 'Limpiar todo' si necesitas reiniciar los datos.")
 
 st.sidebar.header("Datos experimentales")
-tipo_ingreso = st.sidebar.radio("Modo de condición", ["Elegir existente"], ["Crear nueva condición"])
+tipo_ingreso = st.sidebar.radio("Modo de condición", ["Elegir existente", "Crear nueva condición"])
 
 if tipo_ingreso == "Elegir existente":
     condicion_base = st.sidebar.selectbox("Selecciona la condición base", st.session_state.ListaCondiciones)

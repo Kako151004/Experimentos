@@ -122,7 +122,7 @@ else:
     if condicion_nombre and condicion_nombre not in st.session_state.ListaCondiciones:
         st.session_state.ListaCondiciones.append(condicion_nombre)
 
-input_abs_exp = st.sidebar.text_area("ABS experimental (600 nm) (separados por espacios)", " 0,024 0.064 0.102 0.14 0.158 0.222 0.294 0.345")
+input_abs_exp = st.sidebar.text_area("ABS experimental (600 nm) (separados por espacios)", " 0.024 0.064 0.102 0.14 0.158 0.222 0.294 0.345")
 
 col_b1, col_b2 = st.sidebar.columns(2)
 guardar_corrida1 = col_b1.button("Guardar Replica")
@@ -146,7 +146,7 @@ if guardar_corrida1:
             grupo_base = condicion_nombre.strip()
             replicas_existentes = [item for item in st.session_state.HistorialDialisis if item["Grupo"]==grupo_base]
             num_replica = len(replicas_existentes)+1
-            st.session_state.HistorialDialisis.appen({
+            st.session_state.HistorialDialisis.append({
                 "Grupo": grupo_base, "ID_Replica": num_replica, "EtiquetaCompleta": f"{grupo_base} (R{num_replica})", 
                 "ABSExperimental": abs_exp, "Concentracion": concentracion, "MasaAparente": masa_aparente,
                 "FraccionRelativa": fraccion_relativa

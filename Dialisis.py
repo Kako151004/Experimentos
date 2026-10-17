@@ -145,7 +145,7 @@ if guardar_corrida1:
             concentracion = (abs_exp-b_cal)/m_cal
             masa_aparente = concentracion * Volumen_agua
             c_ultimo = concentracion[-1] if len(concentracion) > 0 and concentracion[-1] > 0 else 1.0
-            fraccion_relativa = ((concentracion-concentracion[0])/(c_ultimo-concentracion[0]))*100
+            fraccion_relativa = ((concentracion)/(c_ultimo))*100
             grupo_base = condicion_nombre.strip()
             replicas_existentes = [item for item in st.session_state.HistorialDialisis if item["Grupo"]==grupo_base]
             num_replica = len(replicas_existentes)+1
@@ -158,4 +158,68 @@ if guardar_corrida1:
     
     except Exception as e:
         st.sidebar.error(f"Error procesando datos: {e}")
+
+historial = st.session_state.HistorialDialisis
+if len(historial)>0:
+    st.markdown('---')
+    st.subheader(f"Panel de resultados y control ({len(historial)}) registros totales")
+    
+    grupos_unicos = sorted(list(set(item["Grupo"] for item in historial)))
+    Temperatura_base = sorted(list(set([g.split(" - ")[0] for g in grupos unicos if " - " in g])))
+    
+    datos_agrupados = {}
+    for grupo in grupos_unicos:
+        corridas_grupo = [item for item in historial if item["Grupo"] == grupo]
+        MatrizABS = np.array([c["ABSExperimental"] for c in corridas_grupo])
+        MatrizConc = np.array([c["Concentracion"] for c in corridas_grupo])
+        MatrizMasa = np.array([c["MasaAparente"] for c in corridas_grupo])
+        MatrizFrac = np.array([c["FraccionRelativa"] for c in corridas_grupo])
         
+        PromABS = np.mean(MatrizABS, axis = 0)
+        StdABS = np.std(MatrizABS, axis = 0, ddof = 1) if len(corridas_grupo) > 1 else np.zeros_like(PromABS)
+        PromConc = np.mean(MatrizConc, axis = 0)
+        StdConc = np.std(MatrizConc, axis = 0, ddof = 1) if len(corridas_grupo) >1 else np.zeros_like(PromConc)
+        PromMasa = np.mean(MatrizMasa, axis = 0)
+        PromFrac = np.mean(MatrizFrac, axis = 0)
+        tm = np.diff(tiempos_muestreo)
+        DifConc = np.diff(PromConc)
+        Velocidad_promedio_grupo = DifConc/ tm if np.all(tm>0) else np.zeros_like(DifConc)
+        datos_agrupados[grupo] = { "Tiempos" : tiempos_muestreo, "AbsProm": PromABS, "AbsStd":StdABS,
+                                  "ConcProm": PromConc, "ConcStd": StdConc, "MasaProm": PromMasa, "FracProm": PromFrac,
+                                  "VelocidadPromedio" : Velocidad_promedio_grupo, "Corridas":corridas_grupo}
+        
+    tabs = st.tabs([f"{g}" for g in grupos_unicos]+["Global", "Agitación y resistencia externa", "Temperatura y Arrhenius", "Cinetica y tiempos de proceso", "Optimización y escalamiento", "ANOVA"])
+    for idx, grupo in enumerate(grupos_unicos):
+        d = datos_agrupados[grupo]
+        with tabs[idx]:
+            st.write(f"### Condición: **{grupo}** ({len(d["Corridas"])} réplica(s) agrupadas)")
+            st.write("### Resumen Estadístico")
+            tabla_resumen = {
+                "Tiempo (min)": [int(t) for t in tiempos_muestreo],
+                "ABS Prom +- SD": [f"{d["AbsProm"][i]:.3f}+-{d["AbsStd"][i]:.3f}" for i in range(len(tiempos_muestreo))],
+                "Conc. Prom +- SD (mg/mL)": [f"{d["ConcProm"][i]:.3f}+-{d["ConcStd"][i]:.3f}" for i in range(len(tiempos_muestreo))],
+                "Masa Soluto Extractor(mg)": [f"{v:.2f}" for v in d["MasaProm"]],
+                "Fracción relativa (%)":  [f"{v:.2f}%" for v in d["FracProm"]]
+            }
+            st.dataframe(tabla_resumen, use_container_width=True)
+            st.write("##### Velocidad Promedio de Extracción por Intervalos")
+            if len(tiempos_muestreo) >1:
+                tabla_2_datos = {
+                    "Intervalo de tiempo (min)": [f"{int(ti)} a {int(tf)}" for ti, tf in zip(tiempos_muestreo[:-1], tiempos_muestreo[1:])],
+                    "Velocidad promedio ((mg/ml)/min)": [f"{vm:.4f}" for vm in d["VelocidadPromedio"]]
+                }
+                st.dataframe(tabla_2_datos, use_container_width = True)
+            fig_g, ax_g = plt.subplots(figsize=(7,4))
+            for c_item in d["Corridas"]:
+                ax_g.plot(tiempos_muestreo, c_item["ConcProm"], linestyle = "--", alpha=0.4, label=f"R{c_item["ID_Replica"]}")
+            ax_g.errorbar(tiempos_muestreo, d["ConcProm"], yerr = d["ConcStd"], fmt ="o-", color="black", linewidth=2, capsize=4,label="Promedio +- SD")
+            ax_g.set_xlabel("Tiempo (min)")
+            ax_g.set_ylabel("Concentracion (mg/mL)")
+            ax_g.set_title(f"Cinética con Réplicas: {grupo}")
+            ax_g.grid(True)
+            ax_g.legend()
+            st.pyplot(fig_g)
+                
+    
+        
+    

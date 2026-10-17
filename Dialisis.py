@@ -26,7 +26,9 @@ if "ListaCondiciones" not in st.session_state:
     ]
 
 st.sidebar.header("Parametros y curva de calibrado")
+Volumen_agua = st.sidebar.number_input("Volumen agua (mL)", value = 1.00, format = "%.5f")
 tiempos_input = st.sidebar.text_input("Tiempos de muestreo (separados por espacios)(min): ", value = "0 5 10 15 20 30 45 60")
+tiempos_muestreo = np.array([float(x) dor x in tiempos_input.split()])
 st.sidebar.markdown("---")
 st.sidebar.subheader("Datos de Calibrado")
 input_conc_e = st.sidebar.text_area("Concentración estándar (mg/mL)","0 1 2 3 4 5 6")
@@ -105,3 +107,52 @@ if len(st.session_state.HistorialCalibrado) > 0:
         
     except ValueError:
         st.error("Error: Asegúrate de que todas las réplicas tengan exactamente el mismo número de valores de absorbancia y concentración. Pulsa 'Limpiar todo' si necesitas reiniciar los datos.")
+
+st.sidebar.header("Datos experimentales")
+tipo_ingreso = st.sidebar.radio("Modo de condición", ["Elegir existente"], ["Crear nueva condición"])
+
+if tipo_ingreso == "Elegir existente":
+    condicion_base = st.sidebar.selectbox("Selecciona la condición base", st.session_state.ListaCondiciones)
+    condicion_nombre = condicion_base
+else:
+    Temperatura_nueva = st.sidebar.text_input("Nombre de la temperatura","50°C")
+    Agitacion_nueva = st.sidebar.text_input("Nombre de la agitación", "300rpm")
+    condicion_nombre = f"{Temperatura_nueva.strip()} - {Agitacion_nueva}"
+    
+    if condicion_nombre and condicion_nombre not in st.session_state.ListaCondiciones:
+        st.session_state.ListaCondiciones.append(condicion_nombre)
+
+input_abs_exp = st.sidebar.text_area("ABS experimental (600 nm) (separados por espacios)", " 0,024 0.064 0.102 0.14 0.158 0.222 0.294 0.345")
+
+col_b3, col_b4 = st.sidebar.columns(2)
+guardar_corrida1 = col_b3.button("Guardar Replica")
+limpiar_historial2 = col_b4.button("Limpiar todo")
+
+if limpiar_historial2:
+    st.session_state.HistorialDialisis = []
+    st.success("Historial reiniciado.")
+
+if guardar_corrida1:
+    try:
+        abs_exp = np.array([float(x) for x in input_abs_exp.split()])
+        
+        if len(abs_exp) != len(tiempos_muestreo):
+            st.sidebar.error("La cantidad de valores de ABS deben ser iguales a las del Tiempo")
+        else:
+            concentracion = (abs_exp-b)/m
+            masa_aparente = concentracion * Volumen_agua
+            c_ultimo = concentracion[-1] if len(concentracion) > 0 and concentracion[-1] > 0 else 1.0
+            fraccion_relativa = ((concentracion-concentracion[0])/(c_ultimo-concentracion[0]))*100
+            grupo_base = condicion_nombre.strip()
+            replicas_existentes = [item for item in st.session_state.HistorialDialisis if item["Grupo"]==grupo_base]
+            num_replica = len(replicas_existentes)+1
+            st.session_state.HistorialDialisis.appen({
+                "Grupo": grupo_base, "ID_Replica": num_replica, "EtiquetaCompleta": f"{grupo_base} (R{num_replica})", 
+                "ABSExperimental": abs_exp, "Concentracion": concentracion, "MasaAparente": masa_aparente,
+                "FraccionRelativa": fraccion_relativa
+            })
+            st.sidebar.success(f"Guardado: {grupo_base} (Réplica #{num_replica})")
+    
+    except Exception as e:
+        st.sidebar.error(f"Error procesando datos: {e}")
+        

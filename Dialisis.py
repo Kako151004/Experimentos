@@ -17,7 +17,7 @@ if "HistorialCalibrado" not in st.session_state:
 
 if "HistorialDialisis" not in st.session_state:
     st.session_state.HistorialDialisis = []
-
+    
 if "ListaCondiciones" not in st.session_state:
     st.session_state.ListaCondiciones = [
         "20°C - 0rpm", "20°C - 100rpm", "20°C - 200rpm",
@@ -227,7 +227,7 @@ if len(historial)>0:
         st.markdown("##### Replicas individuales")
         corridas_seleccionadas= []
         for item in historial:
-            if st.checkbox(item["EtiquetaCompletas"],value=False,key=f"chk_corrida_{item['EtiquetaCompleta']}"):
+            if st.checkbox(item["EtiquetaCompleta"],value=False,key=f"chk_corrida_{item['EtiquetaCompleta']}"):
                 corridas_seleccionadas.append(item)
     with col_chk2:
         st.markdow("##### Promedios de Grupos")

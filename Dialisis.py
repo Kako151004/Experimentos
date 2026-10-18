@@ -258,6 +258,39 @@ if len(historial)>0:
         df_v0 = pd.DataFrame(tabla_v0_datos)
         st.dataframe(df_v0, use_container_width=True)
         st.markdown("---")
+        st.subheader("Incremento Porcentual de la Velocidad Inicial (0-10 min)")
+        
+        incrementos_data = []
+        # Identificamos las temperaturas únicas a partir de los nombres de los grupos
+        temperaturas_unicas = sorted(list(set([g.split(" - ")[0] for g in grupos_unicos if " - " in g])))
+        
+        for temp in temperaturas_unicas:
+            # Buscamos los nombres exactos para cada nivel de RPM en esa temperatura
+            g_0 = f"{temp} - 0rpm"
+            g_100 = f"{temp} - 100rpm"
+            g_200 = f"{temp} - 200rpm"
+            
+            # Obtenemos las velocidades iniciales si existen en los datos agrupados
+            v0 = datos_agrupados[g_0]["VelocidadPromedio0-10"] if g_0 in datos_agrupados else None
+            v100 = datos_agrupados[g_100]["VelocidadPromedio0-10"] if g_100 in datos_agrupados else None
+            v200 = datos_agrupados[g_200]["VelocidadPromedio0-10"] if g_200 in datos_agrupados else None
+            
+            # Calculamos los incrementos porcentuales de forma segura
+            inc_0_100 = ((v100 - v0) / v0 * 100) if (v0 is not None and v100 is not None and v0 != 0) else 0.0
+            inc_100_200 = ((v200 - v100) / v100 * 100) if (v100 is not None and v200 is not None and v100 != 0) else 0.0
+            
+            incrementos_data.append({
+                "Temperatura": temp,
+                "v0 (0 rpm)": f"{v0:.4f}" if v0 is not None else "N/A",
+                "v0 (100 rpm)": f"{v100:.4f}" if v100 is not None else "N/A",
+                "v0 (200 rpm)": f"{v200:.4f}" if v200 is not None else "N/A",
+                "Incremento 0 → 100 rpm (%)": f"{inc_0_100:.2f}%" if v0 is not None and v100 is not None else "N/A",
+                "Incremento 100 → 200 rpm (%)": f"{inc_100_200:.2f}%" if v100 is not None and v200 is not None else "N/A"
+            })
+            
+        df_incrementos = pd.DataFrame(incrementos_data)
+        st.dataframe(df_incrementos, use_container_width=True)
+        st.markdown("---")
         st.subheader("Gráfica global comparativa")
         if len(grupos_seleccionados)>0 or len(corridas_seleccionadas)>0:
             fig_glob,ax_glob = plt.subplots(figsize=(9,5))

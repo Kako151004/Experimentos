@@ -248,7 +248,7 @@ if len(historial)>0:
         st.dataframe(tabla_global, use_container_width = True)
         
         st.markdown("---")
-        st.subheader("Incremento Porcentual de la Velocidad Inicial (0-10 min)")
+        st.subheader("Ánalisis de la temperatura a base de la velocidad inicial")
         
         incrementos_data1 = []
         # Identificamos las temperaturas únicas a partir de los nombres de los grupos
@@ -282,7 +282,7 @@ if len(historial)>0:
         df_incrementos1 = pd.DataFrame(incrementos_data1)
         st.dataframe(df_incrementos1, use_container_width=True)
         st.markdown("---")
-        st.subheader("Incremento Porcentual de la Velocidad Inicial (0-10 min)")
+        st.subheader("Ánalisis de la agitación a partir de la velocidad inicial")
         
         incrementos_data = []
         # Identificamos las temperaturas únicas a partir de los nombres de los grupos
@@ -302,14 +302,15 @@ if len(historial)>0:
             # Calculamos los incrementos porcentuales de forma segura
             inc_0_100 = ((v100 - v0) / v0 * 100) if (v0 is not None and v100 is not None and v0 != 0) else 0.0
             inc_100_200 = ((v200 - v100) / v100 * 100) if (v100 is not None and v200 is not None and v100 != 0) else 0.0
-            
+            inc_0_200 = ((v200 - v0) / v0 * 100) if (v0 is not None and v200 is not None and v0 != 0) else 0.0
             incrementos_data.append({
                 "Temperatura": temp,
                 "v0 (0 rpm)": f"{v0:.4f}" if v0 is not None else "N/A",
                 "v0 (100 rpm)": f"{v100:.4f}" if v100 is not None else "N/A",
                 "v0 (200 rpm)": f"{v200:.4f}" if v200 is not None else "N/A",
                 "Incremento 0 → 100 rpm (%)": f"{inc_0_100:.2f}%" if v0 is not None and v100 is not None else "N/A",
-                "Incremento 100 → 200 rpm (%)": f"{inc_100_200:.2f}%" if v100 is not None and v200 is not None else "N/A"
+                "Incremento 100 → 200 rpm (%)": f"{inc_100_200:.2f}%" if v100 is not None and v200 is not None else "N/A",
+                "Incremento 0 → 200 rpm (%)": f"{inc_0_200:.2f}%" if v0 is not None and v200 is not None else "N/A"
             })
             
         df_incrementos = pd.DataFrame(incrementos_data)

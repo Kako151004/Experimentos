@@ -407,10 +407,6 @@ if len(historial)>0:
                     d_g["Tiempos"], d_g["ConcProm"], label=f"{grupo} (Experimental)"
                 )
                 
-                # 2. Curva teórica creciente del modelo: C(t) = C_ref * (1 - exp(-k_app * t))
-                if kapp > 0:
-                    c_teorico = C_ref * (1 - np.exp(-kapp * t_teorico))
-                    ax_kin.plot(t_teorico, c_teorico, linestyle='-', linewidth=2, label=f"{grupo} (Modelo k_app)")
                     
                     # Opcional: Calcular y marcar los puntos exactos de t50 y t80 para este grupo
                     t_50 = np.log(2) / kapp

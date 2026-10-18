@@ -184,9 +184,11 @@ if len(historial)>0:
         tm = np.diff(tiempos_muestreo)
         DifConc = np.diff(PromConc)
         Velocidad_promedio_grupo = DifConc/ tm if np.all(tm>0) else np.zeros_like(DifConc)
+        Velocidad_promedio_0_10 = (PromConc[2]-PromConc[0])/(tiempos_muestreo[2]-tiempos_muestreo[0])
         datos_agrupados[grupo] = { "Tiempos" : tiempos_muestreo, "AbsProm": PromABS, "AbsStd":StdABS,
                                   "ConcProm": PromConc, "ConcStd": StdConc, "MasaProm": PromMasa, "FracProm": PromFrac,
-                                  "VelocidadPromedio" : Velocidad_promedio_grupo, "Corridas":corridas_grupo}
+                                  "VelocidadPromedio" : Velocidad_promedio_grupo, "Corridas":corridas_grupo,
+                                  "VelocidadPromedio0-10":Velocidad_promedio_0_10}
         
     tabs = st.tabs([f"{g}" for g in grupos_unicos]+["Analisis del efecto de agitación y temperatura", "Modelación cinetica aparente y Arrhenius", "Interacción agitación x temperatura","Optimización y escalamiento"])
     for idx, grupo in enumerate(grupos_unicos):
@@ -236,7 +238,20 @@ if len(historial)>0:
             if st.checkbox(f"Promedio: {grupo}",value=True, key=f"chk_grupo_{grupo}"):
                 grupos_seleccionados.append(grupo)
     
+    d= datos_agrupados[grupo]
     with tabs[len(grupos_unicos)]:
+        st.subheader("Tabla de todos los Grupos")
+        tabla_global = {"Tiempo (min)": [int(t) for t in tiempos_muestreo]}
+        for grupo in grupos_unicos:
+            tabla_global[f"{grupo} (ABS Prom +- SD)"] = [f"{datos_agrupados[grupo]['AbsProm'][i]:.3f:} +- {datos_agrupados[grupo]['AbsStd'][i]:.3f}" for i in range(len(tiempos_muestreo))]
+            tabla_global[f"{grupo} (Conc Prom +- SD)"] = [f"{datos_agrupados[grupo]['ConcProm'][i]:.3f:} +- {datos_agrupados[grupo]['ConcStd'][i]:.3f}" for i in range(len(tiempos_muestreo))]
+        
+        st.markdown("---")
+        st.subheader("Tabla de Velocidad inicial (0-10)")
+        tabla_velocidad_inicial ={
+            "Grupo/Condicion": {grupo},
+            "Velocidad (mg/ml)": [f"{v:.2f}" for v in d["VelocidadPromedio0-10"]]
+        }
         st.subheader("Gráfica global comparativa")
         if len(grupos_seleccionados)>0 or len(corridas_seleccionadas)>0:
             fig_glob,ax_glob = plt.subplots(figsize=(9,5))

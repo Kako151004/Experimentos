@@ -405,12 +405,10 @@ if len(historial)>0:
                 # 1. Puntos experimentales (Promedio de las réplicas)
                 ax_kin.plot(
                     d_g["Tiempos"], d_g["ConcProm"], label=f"{grupo} (Experimental)"
-                )
-                
-                    
+                )        
                     # Opcional: Calcular y marcar los puntos exactos de t50 y t80 para este grupo
-                    t_50 = np.log(2) / kapp
-                    t_80 = np.log(5) / kapp
+            t_50 = np.log(2) / kapp
+            t_80 = np.log(5) / kapp
                     # Puedes imprimir o mostrar estos valores en tu reporte
                     
             ax_kin.set_xlabel("Tiempo (min)")

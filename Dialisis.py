@@ -404,8 +404,7 @@ if len(historial)>0:
                 
                 # 1. Puntos experimentales (Promedio de las réplicas)
                 ax_kin.plot(
-                    d_g["Tiempos"], d_g["ConcProm"], yerr=d_g["ConcStd"], 
-                    fmt='o', capsize=4, label=f"{grupo} (Experimental)"
+                    d_g["Tiempos"], d_g["ConcProm"], label=f"{grupo} (Experimental)"
                 )
                 
                 # 2. Curva teórica creciente del modelo: C(t) = C_ref * (1 - exp(-k_app * t))

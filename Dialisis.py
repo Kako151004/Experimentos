@@ -96,7 +96,7 @@ if len(st.session_state.HistorialCalibrado) > 0:
         
         # Gráfico
         fig, ax = plt.subplots(figsize=(6, 4))
-        ax.plot(ConcC, PromedioABSE, linestyle = "--", alpha=0.8)
+        ax.plot(ConcC, PromedioABSE, linestyle = "--", color='green')
         ax.errorbar(ConcC, PromedioABSE, yerr=DesviacionABSE, fmt='o', color='green', ecolor='gray', capsize=4, label=Ecuación)
         ax.set_title("Curva de calibrado")
         ax.set_xlabel('Concentración (mg/mL)')

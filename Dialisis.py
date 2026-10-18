@@ -27,6 +27,7 @@ if "ListaCondiciones" not in st.session_state:
 
 st.sidebar.header("Parametros y curva de calibrado")
 Volumen_agua = st.sidebar.number_input("Volumen agua (mL)", value = 1.00, format = "%.5f")
+ConcRef = st.sidebar.number_input("ConcentraciónReferencia (mg/mL)", value = 5.20, format = "%.5f")
 tiempos_input = st.sidebar.text_input("Tiempos de muestreo (separados por espacios)(min): ", value = "0 5 10 15 20 30 45 60")
 tiempos_muestreo = np.array([float(x) for x in tiempos_input.split()])
 st.sidebar.markdown("---")
@@ -186,10 +187,24 @@ if len(historial)>0:
         DifConc = np.diff(PromConc)
         Velocidad_promedio_grupo = DifConc/ tm if np.all(tm>0) else np.zeros_like(DifConc)
         Velocidad_promedio_0_10 = (PromConc[2]-PromConc[0])/(tiempos_muestreo[2]-tiempos_muestreo[0])
+        
+        valores_validos = PromConc < ConcRef
+        if np.any(valores_validos):
+            t_validos = tiempos_muestreo[valores_validos]
+            c_validos = PromConc[valores_validos]
+            dif_log = np.log(ConcRef-c_validos)
+            m_k, b_k, r_k,_,_ = linregress(t_validos, dif_log)
+            kapp = -m_k
+            R2k = r_k**2
+        else:
+            kapp= 0.0
+            R2K = 0.0
+        
+        
         datos_agrupados[grupo] = { "Tiempos" : tiempos_muestreo, "AbsProm": PromABS, "AbsStd":StdABS,
                                   "ConcProm": PromConc, "ConcStd": StdConc, "MasaProm": PromMasa, "FracProm": PromFrac,
                                   "VelocidadPromedio" : Velocidad_promedio_grupo, "Corridas":corridas_grupo,
-                                  "VelocidadPromedio0-10":Velocidad_promedio_0_10}
+                                  "VelocidadPromedio0-10":Velocidad_promedio_0_10, "Kapp": kapp, "RK": R2k}
         
     tabs = st.tabs([f"{g}" for g in grupos_unicos]+["Analisis del efecto de agitación y temperatura", "Modelación cinetica aparente y Arrhenius", "Interacción agitación x temperatura","Optimización y escalamiento"])
     for idx, grupo in enumerate(grupos_unicos):
@@ -248,7 +263,7 @@ if len(historial)>0:
         st.dataframe(tabla_global, use_container_width = True)
         
         st.markdown("---")
-        st.subheader("Ánalisis de la temperatura a base de la velocidad inicial")
+        st.subheader("Ánalisis de la temperatura a base de la velocidad inicial (0-10 min)")
         
         incrementos_data1 = []
         # Identificamos las temperaturas únicas a partir de los nombres de los grupos
@@ -282,7 +297,7 @@ if len(historial)>0:
         df_incrementos1 = pd.DataFrame(incrementos_data1)
         st.dataframe(df_incrementos1, use_container_width=True)
         st.markdown("---")
-        st.subheader("Ánalisis de la agitación a partir de la velocidad inicial")
+        st.subheader("Ánalisis de la agitación a partir de la velocidad inicial (0-10 min)")
         
         incrementos_data = []
         # Identificamos las temperaturas únicas a partir de los nombres de los grupos
@@ -333,3 +348,11 @@ if len(historial)>0:
             st.pyplot(fig_glob)
         else:
             st.warning("Selecciona al menos un grupo o réplica en el panel superior.")
+    with tabs [len(grupos_unicos)+1]:
+        st.subheader("Tabla de todos los Grupos (Kapp)")
+        tabla_global = {"Tiempo (min)": [int(t) for t in tiempos_muestreo]}
+        for grupo in grupos_unicos:
+            tabla_global[f"{grupo} (Kapp)"] = [f"{datos_agrupados[grupo]['Kapp'][i]:.3f}" for i in range(len(tiempos_muestreo))]
+            tabla_global[f"{grupo} (R**2)"] = [f"{datos_agrupados[grupo]['RK'][i]:.3f}" for i in range(len(tiempos_muestreo))]
+        st.dataframe(tabla_global, use_container_width = True)
+        

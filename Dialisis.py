@@ -356,7 +356,7 @@ if len(historial)>0:
             tabla_kapp_datos.append({
                 "Grupo / Condición": g_nombre,
                 "k_app (1/min)": f"{d_g['Kapp']:.4f}",
-                "R² del ajuste cinético": f"{d_g['R2_Kapp']:.4f}"
+                "R² del ajuste cinético": f"{d_g['RK']:.4f}"
             })
         df_kapp = pd.DataFrame(tabla_kapp_datos)
         st.dataframe(df_kapp, use_container_width=True)

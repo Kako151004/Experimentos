@@ -200,11 +200,22 @@ if len(historial)>0:
             kapp= 0.0
             R2K = 0.0
         
+        if kapp > 0:
+            import numpy as np
+            t_50 = np.log(2) / kapp
+            t_80 = np.log(5) / kapp
+        else:
+            t_50 = 0.0
+            t_80 = 0.0
+            
+        
+        
         
         datos_agrupados[grupo] = { "Tiempos" : tiempos_muestreo, "AbsProm": PromABS, "AbsStd":StdABS,
                                   "ConcProm": PromConc, "ConcStd": StdConc, "MasaProm": PromMasa, "FracProm": PromFrac,
                                   "VelocidadPromedio" : Velocidad_promedio_grupo, "Corridas":corridas_grupo,
-                                  "VelocidadPromedio0-10":Velocidad_promedio_0_10, "Kapp": kapp, "RK": R2k}
+                                  "VelocidadPromedio0-10":Velocidad_promedio_0_10, "Kapp": kapp, "RK": R2k,
+                                  "t50" = t_50, "t80" = t_80}
         
     tabs = st.tabs([f"{g}" for g in grupos_unicos]+["Analisis del efecto de agitación y temperatura", "Modelación cinetica aparente y Arrhenius", "Interacción agitación x temperatura","Optimización y escalamiento"])
     for idx, grupo in enumerate(grupos_unicos):
@@ -359,7 +370,9 @@ if len(historial)>0:
                 tabla_kapp_datos.append({
                     "Grupo / Condición": g_nombre,
                     "k_app (1/min)": f"{d_g['Kapp']:.4f}",
-                    "R2 del ajuste cinético": f"{d_g['RK']:.4f}"
+                    "R2 del ajuste cinético": f"{d_g['RK']:.4f},
+                    "t50 (min)": f"{d_g['t50']:.2f}",
+                    "t80 (min)": f"{d_g['t80']:.2f}"
                 })
             st.dataframe(pd.DataFrame(tabla_kapp_datos), use_container_width=True)
             

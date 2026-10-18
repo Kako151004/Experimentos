@@ -215,7 +215,7 @@ if len(historial)>0:
                                   "ConcProm": PromConc, "ConcStd": StdConc, "MasaProm": PromMasa, "FracProm": PromFrac,
                                   "VelocidadPromedio" : Velocidad_promedio_grupo, "Corridas":corridas_grupo,
                                   "VelocidadPromedio0-10":Velocidad_promedio_0_10, "Kapp": kapp, "RK": R2k,
-                                  "t50" = t_50, "t80" = t_80}
+                                  "t50": t_50, "t80": t_80}
         
     tabs = st.tabs([f"{g}" for g in grupos_unicos]+["Analisis del efecto de agitación y temperatura", "Modelación cinetica aparente y Arrhenius", "Interacción agitación x temperatura","Optimización y escalamiento"])
     for idx, grupo in enumerate(grupos_unicos):

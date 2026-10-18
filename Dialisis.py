@@ -350,9 +350,13 @@ if len(historial)>0:
             st.warning("Selecciona al menos un grupo o réplica en el panel superior.")
     with tabs [len(grupos_unicos)+1]:
         st.subheader("Tabla de todos los Grupos (Kapp)")
-        tabla_global = {"Tiempo (min)": [int(t) for t in tiempos_muestreo]}
-        for grupo in grupos_unicos:
-            tabla_global[f"{grupo} (Kapp)"] = [f"{datos_agrupados[grupo]['Kapp'][i]:.3f}" for i in range(len(tiempos_muestreo))]
-            tabla_global[f"{grupo} (R**2)"] = [f"{datos_agrupados[grupo]['RK'][i]:.3f}" for i in range(len(tiempos_muestreo))]
-        st.dataframe(tabla_global, use_container_width = True)
-        
+        tabla_kapp_datos = []
+        for g_nombre in grupos_unicos:
+            d_g = datos_agrupados[g_nombre]
+            tabla_kapp_datos.append({
+                "Grupo / Condición": g_nombre,
+                "k_app (1/min)": f"{d_g['Kapp']:.4f}",
+                "R² del ajuste cinético": f"{d_g['R2_Kapp']:.4f}"
+            })
+        df_kapp = pd.DataFrame(tabla_kapp_datos)
+        st.dataframe(df_kapp, use_container_width=True)

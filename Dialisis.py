@@ -379,7 +379,7 @@ with tabs[len(grupos_unicos) + 1]:
                         tabla_kapp_datos.append({
                             "Grupo / Condición": g_nombre,
                             "k_app (1/min)": f"{d_g['Kapp']:.4f}",
-                            "R2 del ajuste cinético": f"{d_g['RK']:.4f},
+                            "R2 del ajuste cinético": f"{d_g['RK']:.4f}",
                             "t50 (min)": f"{d_g['t50']:.2f}",
                             "t80 (min)": f"{d_g['t80']:.2f}"
                         })

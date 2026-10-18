@@ -367,7 +367,7 @@ if len(historial)>0:
             [
                 "Tabla Resumen de Kapp, t50 y t80",
                 "Gráfica Cinética con t50 y t80",
-                "Ecuación de Arrhenius"
+                ""Mapa de Calor (Temperatura vs Agitación)""
             ]
         )
         
@@ -422,8 +422,6 @@ if len(historial)>0:
             
         elif sub_vista == "Mapa de Calor (Temperatura vs Agitación)":
             st.write("#### Mapa de Calor: Interacción de Temperatura y Agitación ($k_{app}$)")
-            
-
             matriz_datos = []
             for g_nombre in grupos_unicos:
                 d_g = datos_agrupados[g_nombre]
@@ -438,7 +436,7 @@ if len(historial)>0:
                     temp = 0.0
                     rpm = 0.0
                     
-                matriz_datos.append({"Temperatura": temp, "RPM": rpm, "Kapp": k_val})
+            matriz_datos.append({"Temperatura": temp, "RPM": rpm, "Kapp": k_val})
                 
             df_heatmap = pd.DataFrame(matriz_datos)
             

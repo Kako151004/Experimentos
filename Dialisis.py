@@ -420,6 +420,56 @@ if len(historial)>0:
             st.pyplot(fig_kin)
             pass
             
-        elif sub_vista == "Ecuación de Arrhenius":
-            # Aquí irá el gráfico de ln(k) vs 1/T más adelante
+        elif sub_vista == "Mapa de Calor (Temperatura vs Agitación)":
+            st.write("#### Mapa de Calor: Interacción de Temperatura y Agitación ($k_{app}$)")
+            
+
+            matriz_datos = []
+            for g_nombre in grupos_unicos:
+                d_g = datos_agrupados[g_nombre]
+                k_val = d_g["Kapp"]
+                
+                try:
+                    # Extrae temperatura y rpm del nombre (ej: "20°C - 0rpm")
+                    partes = g_nombre.replace("°C", "").replace("rpm", "").split("-")
+                    temp = float(partes[0].strip())
+                    rpm = float(partes[1].strip())
+                except:
+                    temp = 0.0
+                    rpm = 0.0
+                    
+                matriz_datos.append({"Temperatura": temp, "RPM": rpm, "Kapp": k_val})
+                
+            df_heatmap = pd.DataFrame(matriz_datos)
+            
+            if not df_heatmap.empty and df_heatmap["Temperatura"].sum() > 0:
+                # Creamos la tabla pivote (filas = RPM, columnas = Temperatura)
+                pivote = df_heatmap.pivot(index="RPM", columns="Temperatura", values="Kapp")
+                
+                fig_hm, ax_hm = plt.subplots(figsize=(7, 4.5))
+                cax = ax_hm.imshow(pivote.values, cmap="YlOrRd", aspect="auto", origin="lower")
+                
+                ax_hm.set_xticks(np.arange(len(pivote.columns)))
+                ax_hm.set_yticks(np.arange(len(pivote.index)))
+                ax_hm.set_xticklabels([f"{t} °C" for t in pivote.columns])
+                ax_hm.set_yticklabels([f"{r} rpm" for r in pivote.index])
+                
+                ax_hm.set_xlabel("Temperatura (°C)")
+                ax_hm.set_ylabel("Agitación (RPM)")
+                ax_hm.set_title("Mapa de Calor: $k_{app}$ según Temperatura y Agitación")
+                
+                cbar = fig_hm.colorbar(cax)
+                cbar.set_label("$k_{app}$ (1/min)")
+                
+                # Anotar los valores numéricos de k_app en cada celda
+                for i in range(len(pivote.index)):
+                    for j in range(len(pivote.columns)):
+                        val = pivote.values[i, j]
+                        if not np.isnan(val):
+                            ax_hm.text(j, i, f"{val:.4f}", ha="center", va="center", color="black", fontweight="bold")
+                            
+                plt.tight_layout()
+                st.pyplot(fig_hm)
+        else:
+            st.warning("No se pudieron extraer automáticamente las temperaturas y RPM de los nombres de los grupos para generar el mapa de calor.")
             pass

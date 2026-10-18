@@ -243,15 +243,21 @@ if len(historial)>0:
         st.subheader("Tabla de todos los Grupos")
         tabla_global = {"Tiempo (min)": [int(t) for t in tiempos_muestreo]}
         for grupo in grupos_unicos:
-            tabla_global[f"{grupo} (ABS Prom +- SD)"] = [f"{datos_agrupados[grupo]['AbsProm'][i]:.3f} +- {datos_agrupados[grupo]['AbsStd'][i]:.3f}" for i in range(len(tiempos_muestreo))]
-            tabla_global[f"{grupo} (Conc Prom +- SD)"] = [f"{datos_agrupados[grupo]['ConcProm'][i]:.3f} +- {datos_agrupados[grupo]['ConcStd'][i]:.3f}" for i in range(len(tiempos_muestreo))]
-        
+            tabla_global[f"{grupo} (ABS Prom +- SD)"] = [f"{datos_agrupados[grupo]['AbsProm'][i]:.3f:} +- {datos_agrupados[grupo]['AbsStd'][i]:.3f}" for i in range(len(tiempos_muestreo))]
+            tabla_global[f"{grupo} (Conc Prom +- SD)"] = [f"{datos_agrupados[grupo]['ConcProm'][i]:.3f:} +- {datos_agrupados[grupo]['ConcStd'][i]:.3f}" for i in range(len(tiempos_muestreo))]
+        st.dataframe(tabla_global, use_container_width = True)
         st.markdown("---")
         st.subheader("Tabla de Velocidad inicial (0-10)")
-        tabla_velocidad_inicial ={
-            "Grupo/Condicion": {grupo},
-            "Velocidad (mg/ml)": [f"{v:.2f}" for v in d["VelocidadPromedio0-10"]]
-        }
+        tabla_v0_datos = []
+        for g_nombre in grupos_unicos:
+            d_grupo = datos_agrupados[g_nombre]
+            tabla_v0_datos.append({
+                "Grupo/Condición": g_nombre,
+                "Velocidad inicial (0-10 min) [mg/mL*min]": f"{d_grupo['VelocidadPromedio0-10']:.4f}"
+            })
+        df_v0 = pd.DataFrame(tabla_v0_datos)
+        st.dataframe(df_v0, use_container_width=True)
+        st.markdown("---")
         st.subheader("Gráfica global comparativa")
         if len(grupos_seleccionados)>0 or len(corridas_seleccionadas)>0:
             fig_glob,ax_glob = plt.subplots(figsize=(9,5))
@@ -268,4 +274,4 @@ if len(historial)>0:
             plt.tight_layout()
             st.pyplot(fig_glob)
         else:
-            st.warninf("Selecciona al menos un grupo o réplica en el panel superior.")
+            st.warning("Selecciona al menos un grupo o réplica en el panel superior.")

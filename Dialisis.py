@@ -367,7 +367,7 @@ if len(historial)>0:
             [
                 "Tabla Resumen de Kapp, t50 y t80",
                 "Gráfica Cinética con t50 y t80",
-                ""Mapa de Calor (Temperatura vs Agitación)""
+                "Mapa de Calor (Temperatura vs Agitación)"
             ]
         )
         

@@ -359,37 +359,74 @@ if len(historial)>0:
             st.pyplot(fig_glob)
         else:
             st.warning("Selecciona al menos un grupo o réplica en el panel superior.")
-    with tabs[len(grupos_unicos) + 1]:
-        st.subheader("Modelación Cinética Aparente ($k_{app}$)")
-        
-        # Bloque 1: Tabla
+    # 1. Creamos la pestaña de Modelación Cinética (asumiendo que es el índice correspondiente en tus tabs)
+with tabs[len(grupos_unicos) + 1]:
+    st.subheader("Modelación Cinética y Parámetros de Transferencia")
+    sub_vista = st.selectbox(
+        "Selecciona el apartado a visualizar:",
+        [
+            "Tabla Resumen de Kapp, t50 y t80",
+            "Gráfica Cinética con t50 y t80",
+            "Ecuación de Arrhenius"
+        ]
+    )
+    
+    if sub_vista == "Tabla Resumen de Kapp, t50 y t80":
         with st.expander("Ver Tabla Resumen de $k_{app}$ y $R^2$", expanded=True):
-            tabla_kapp_datos = []
-            for g_nombre in grupos_unicos:
-                d_g = datos_agrupados[g_nombre]
-                tabla_kapp_datos.append({
-                    "Grupo / Condición": g_nombre,
-                    "k_app (1/min)": f"{d_g['Kapp']:.4f}",
-                    "R2 del ajuste cinético": f"{d_g['RK']:.4f}",
-                    "t50 (min)": f"{d_g['t50']:.2f}",
-                    "t80 (min)": f"{d_g['t80']:.2f}"
-                })
-            st.dataframe(pd.DataFrame(tabla_kapp_datos), use_container_width=True)
+                    tabla_kapp_datos = []
+                    for g_nombre in grupos_unicos:
+                        d_g = datos_agrupados[g_nombre]
+                        tabla_kapp_datos.append({
+                            "Grupo / Condición": g_nombre,
+                            "k_app (1/min)": f"{d_g['Kapp']:.4f}",
+                            "R2 del ajuste cinético": f"{d_g['RK']:.4f},
+                            "t50 (min)": f"{d_g['t50']:.2f}",
+                            "t80 (min)": f"{d_g['t80']:.2f}"
+                        })
+                    st.dataframe(pd.DataFrame(tabla_kapp_datos), use_container_width=True)
+                    
+        pass
+    elif sub_vista == "Gráfica Cinética con t50 y t80":
+        st.write("#### Perfil Cinético y Tiempos Característicos ($t_{50}$ y $t_{80}$)")
+        
+        fig_kin, ax_kin = plt.subplots(figsize=(9, 5))
+        C_ref = 5.20  # Tu concentración de referencia o equilibrio (C_infinito)
+        t_teorico = np.linspace(0, max(tiempos_muestreo), 100)
+        
+        # Graficamos las líneas horizontales de referencia para el 50% y 80% como en la diapo 18
+        ax_kin.axhline(y=0.5 * C_ref, color='orange', linestyle=':', alpha=0.7, label=f"50% C_ref ({0.5 * C_ref} mg/mL)")
+        ax_kin.axhline(y=0.8 * C_ref, color='blue', linestyle=':', alpha=0.7, label=f"80% C_ref ({0.8 * C_ref} mg/mL)")
+        ax_kin.axhline(y=C_ref, color='red', linestyle='--', alpha=0.6, label=f"C_ref (Equilibrio) = {C_ref} mg/mL")
+        
+        for grupo in grupos_unicos:
+            d_g = datos_agrupados[grupo]
+            k_val = d_g["Kapp"]
             
-        # Bloque 2: Gráfica
-        with st.expander("Ver Gráficas de Ajuste Lineal de $k_{app}$", expanded=False):
-            fig_k, ax_k = plt.subplots(figsize=(8, 4))
-            C_ref = 5.20
-            for g_nombre in grupos_unicos:
-                d_g = datos_agrupados[g_nombre]
-                validos = d_g["ConcProm"] < C_ref
-                if np.any(validos):
-                    t_v = d_g["Tiempos"][validos]
-                    c_v = d_g["ConcProm"][validos]
-                    ax_k.plot(t_v, np.log(C_ref - c_v), 'o--', label=g_nombre)
-            ax_k.set_xlabel("Tiempo (min)")
-            ax_k.set_ylabel("ln(C_ref - C)")
-            ax_k.grid(True)
-            ax_k.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-            plt.tight_layout()
-            st.pyplot(fig_k)
+            # 1. Puntos experimentales (Promedio de las réplicas)
+            ax_kin.errorbar(
+                d_g["Tiempos"], d_g["ConcProm"], yerr=d_g["ConcStd"], 
+                fmt='o', capsize=4, label=f"{grupo} (Experimental)"
+            )
+            
+            # 2. Curva teórica creciente del modelo: C(t) = C_ref * (1 - exp(-k_app * t))
+            if kapp > 0:
+                c_teorico = C_ref * (1 - np.exp(-kapp * t_teorico))
+                ax_kin.plot(t_teorico, c_teorico, linestyle='-', linewidth=2, label=f"{grupo} (Modelo k_app)")
+                
+                # Opcional: Calcular y marcar los puntos exactos de t50 y t80 para este grupo
+                t_50 = np.log(2) / kapp
+                t_80 = np.log(5) / kapp
+                # Puedes imprimir o mostrar estos valores en tu reporte
+                
+        ax_kin.set_xlabel("Tiempo (min)")
+        ax_kin.set_ylabel("Concentración (mg/mL)")
+        ax_kin.set_title("Cinética de Diálisis: Ajuste al Modelo y Tiempos Característicos")
+        ax_kin.grid(True)
+        ax_kin.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.tight_layout()
+        st.pyplot(fig_kin)
+        pass
+        
+    elif sub_vista == "Ecuación de Arrhenius":
+        # Aquí irá el gráfico de ln(k) vs 1/T más adelante
+        pass

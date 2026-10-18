@@ -403,7 +403,7 @@ if len(historial)>0:
                 k_val = d_g["Kapp"]
                 
                 # 1. Puntos experimentales (Promedio de las réplicas)
-                ax_kin.errorbar(
+                ax_kin.plot(
                     d_g["Tiempos"], d_g["ConcProm"], yerr=d_g["ConcStd"], 
                     fmt='o', capsize=4, label=f"{grupo} (Experimental)"
                 )

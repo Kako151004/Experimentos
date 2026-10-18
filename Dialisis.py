@@ -243,8 +243,8 @@ if len(historial)>0:
         st.subheader("Tabla de todos los Grupos")
         tabla_global = {"Tiempo (min)": [int(t) for t in tiempos_muestreo]}
         for grupo in grupos_unicos:
-            tabla_global[f"{grupo} (ABS Prom +- SD)"] = [f"{datos_agrupados[grupo]['AbsProm'][i]:.3f:} +- {datos_agrupados[grupo]['AbsStd'][i]:.3f}" for i in range(len(tiempos_muestreo))]
-            tabla_global[f"{grupo} (Conc Prom +- SD)"] = [f"{datos_agrupados[grupo]['ConcProm'][i]:.3f:} +- {datos_agrupados[grupo]['ConcStd'][i]:.3f}" for i in range(len(tiempos_muestreo))]
+            tabla_global[f"{grupo} (ABS Prom +- SD)"] = [f"{datos_agrupados[grupo]['AbsProm'][i]:.3f} +- {datos_agrupados[grupo]['AbsStd'][i]:.3f}" for i in range(len(tiempos_muestreo))]
+            tabla_global[f"{grupo} (Conc Prom +- SD)"] = [f"{datos_agrupados[grupo]['ConcProm'][i]:.3f} +- {datos_agrupados[grupo]['ConcStd'][i]:.3f}" for i in range(len(tiempos_muestreo))]
         
         st.markdown("---")
         st.subheader("Tabla de Velocidad inicial (0-10)")

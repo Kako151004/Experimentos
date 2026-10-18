@@ -461,7 +461,7 @@ if len(historial)>0:
                     pivote = df_heatmap.pivot(index="RPM", columns="Temperatura", values="Kapp")
                     
                     fig_hm, ax_hm = plt.subplots(figsize=(8, 5))
-                    cax = ax_hm.imshow(pivote.values, cmap="magma", aspect="auto", origin="lower")
+                    cax = ax_hm.imshow(pivote.values, cmap="plasma", aspect="auto", origin="lower")
                     
                     ax_hm.set_xticks(np.arange(len(pivote.columns)))
                     ax_hm.set_yticks(np.arange(len(pivote.index)))

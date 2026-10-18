@@ -250,6 +250,40 @@ if len(historial)>0:
         st.markdown("---")
         st.subheader("Incremento Porcentual de la Velocidad Inicial (0-10 min)")
         
+        incrementos_data1 = []
+        # Identificamos las temperaturas únicas a partir de los nombres de los grupos
+        rpm_unicas = sorted(list(set([g.split(" - ")[1] for g in grupos_unicos if " - " in g])))
+        
+        for rpm in rpm_unicas:
+            # Buscamos los nombres exactos para cada nivel de RPM en esa temperatura
+            g_20 = f"20°C - {rpm}"
+            g_30 = f"30°C - {rpm}"
+            g_40 = f"40°C - {rpm}"
+            
+            # Obtenemos las velocidades iniciales si existen en los datos agrupados
+            v20 = datos_agrupados[g_20]["VelocidadPromedio0-10"] if g_20 in datos_agrupados else None
+            v30 = datos_agrupados[g_30]["VelocidadPromedio0-10"] if g_30 in datos_agrupados else None
+            v40 = datos_agrupados[g_40]["VelocidadPromedio0-10"] if g_40 in datos_agrupados else None
+            
+            # Calculamos los incrementos porcentuales de forma segura
+            inc_20_30 = ((v30 - v20) / v20 * 100) if (v20 is not None and v30 is not None and v20 != 0) else 0.0
+            inc_30_40 = ((v40 - v30) / v30 * 100) if (v30 is not None and v40 is not None and v30 != 0) else 0.0
+            inc_20_40 = ((v40 - v20) / v20 * 100) if (v20 is not None and v40 is not None and v20 != 0) else 0.0
+            incrementos_data1.append({
+                "Temperatura": rpm,
+                "v0 (20°C)": f"{v20:.4f}" if v20 is not None else "N/A",
+                "v0 (30°C)": f"{v30:.4f}" if v30 is not None else "N/A",
+                "v0 (40°C)": f"{v40:.4f}" if v40 is not None else "N/A",
+                "Incremento 20 → 30 °C (%)": f"{inc_20_30:.2f}%" if v20 is not None and v30 is not None else "N/A",
+                "Incremento 30 → 40 °C (%)": f"{inc_30_40:.2f}%" if v30 is not None and v40 is not None else "N/A",
+                "Incremento 20 → 40 °C (%)": f"{inc_20_40:.2f}%" if v20 is not None and v40 is not None else "N/A"
+            })
+            
+        df_incrementos1 = pd.DataFrame(incrementos_data1)
+        st.dataframe(df_incrementos1, use_container_width=True)
+        st.markdown("---")
+        st.subheader("Incremento Porcentual de la Velocidad Inicial (0-10 min)")
+        
         incrementos_data = []
         # Identificamos las temperaturas únicas a partir de los nombres de los grupos
         temperaturas_unicas = sorted(list(set([g.split(" - ")[0] for g in grupos_unicos if " - " in g])))

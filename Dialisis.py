@@ -349,34 +349,34 @@ if len(historial)>0:
         else:
             st.warning("Selecciona al menos un grupo o réplica en el panel superior.")
     with tabs[len(grupos_unicos) + 1]:
-    st.subheader("Modelación Cinética Aparente ($k_{app}$)")
-    
-    # Bloque 1: Tabla
-    with st.expander("Ver Tabla Resumen de $k_{app}$ y $R^2$", expanded=True):
-        tabla_kapp_datos = []
-        for g_nombre in grupos_unicos:
-            d_g = datos_agrupados[g_nombre]
-            tabla_kapp_datos.append({
-                "Grupo / Condición": g_nombre,
-                "k_app (1/min)": f"{d_g['Kapp']:.4f}",
-                "R2 del ajuste cinético": f"{d_g['RK']:.4f}"
-            })
-        st.dataframe(pd.DataFrame(tabla_kapp_datos), use_container_width=True)
+        st.subheader("Modelación Cinética Aparente ($k_{app}$)")
         
-    # Bloque 2: Gráfica
-    with st.expander("Ver Gráficas de Ajuste Lineal de $k_{app}$", expanded=False):
-        fig_k, ax_k = plt.subplots(figsize=(8, 4))
-        C_ref = 5.20
-        for g_nombre in grupos_unicos:
-            d_g = datos_agrupados[g_nombre]
-            validos = d_g["ConcProm"] < C_ref
-            if np.any(validos):
-                t_v = d_g["Tiempos"][validos]
-                c_v = d_g["ConcProm"][validos]
-                ax_k.plot(t_v, np.log(C_ref - c_v), 'o--', label=g_nombre)
-        ax_k.set_xlabel("Tiempo (min)")
-        ax_k.set_ylabel("ln(C_ref - C)")
-        ax_k.grid(True)
-        ax_k.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-        plt.tight_layout()
-        st.pyplot(fig_k)
+        # Bloque 1: Tabla
+        with st.expander("Ver Tabla Resumen de $k_{app}$ y $R^2$", expanded=True):
+            tabla_kapp_datos = []
+            for g_nombre in grupos_unicos:
+                d_g = datos_agrupados[g_nombre]
+                tabla_kapp_datos.append({
+                    "Grupo / Condición": g_nombre,
+                    "k_app (1/min)": f"{d_g['Kapp']:.4f}",
+                    "R2 del ajuste cinético": f"{d_g['RK']:.4f}"
+                })
+            st.dataframe(pd.DataFrame(tabla_kapp_datos), use_container_width=True)
+            
+        # Bloque 2: Gráfica
+        with st.expander("Ver Gráficas de Ajuste Lineal de $k_{app}$", expanded=False):
+            fig_k, ax_k = plt.subplots(figsize=(8, 4))
+            C_ref = 5.20
+            for g_nombre in grupos_unicos:
+                d_g = datos_agrupados[g_nombre]
+                validos = d_g["ConcProm"] < C_ref
+                if np.any(validos):
+                    t_v = d_g["Tiempos"][validos]
+                    c_v = d_g["ConcProm"][validos]
+                    ax_k.plot(t_v, np.log(C_ref - c_v), 'o--', label=g_nombre)
+            ax_k.set_xlabel("Tiempo (min)")
+            ax_k.set_ylabel("ln(C_ref - C)")
+            ax_k.grid(True)
+            ax_k.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            plt.tight_layout()
+            st.pyplot(fig_k)

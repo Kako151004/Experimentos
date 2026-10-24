@@ -21,6 +21,12 @@ if "ListadeReactores" not in st.session_state:
 
 if "AnalisisBlancos" not in st.session_state:
     st.session_state.AnalisisBlancos = []
+    
+if "ListadeCondicionMS" not in st.session_state:
+    st.session_state.ListadeCondicionMS = ["Suspensión 1", "Suspensión 2", "Suspensión 3", "Suspensión 4", "Suspensión 5", "Suspensión 6", "Suspensión 7", "Suspensión 8", "Suspensión 9"]
+    
+if "HistorialdeBiomasaSeca" not in st.session_state:
+    st.session_state.HistorialdeBiomasaSeca = []
 # Barra lateral
 st.sidebar.header("Parametros")
 st.sidebar.markdown("---")
@@ -64,6 +70,29 @@ if Guardar_analisis1:
 st.sidebar.markdown("---")
 
 st.sidebar.header("Calibración de biomasa seca frente a OD600")
+tipo_ingreso = st.sidebar.radio("Modo de condición")
+condicion_base = st.sidebar.selectbox("Selecciona la condición base", st.session_state.ListadeCondicionMS)
+condicion_nombre = condicion_base
+Volumen = st.sidebar.number_input("Volumen centrifugado (mL)", value = 50.00, format = "%.4f")
+MasaR = st.sidebar.number_input("Masa de Recipiente seco (g)", value = 16.8690, format = "%.4f")
+MasaRC = st.sidebar.number_input("Masa de recipiente seco + celulas (g)", value = 16.8736, format = "%.4f")
+DilucionMC = st.sidebar.number_input("Dilución OD (1:x)", value = 1, format = "%.2f")
+OD600Mc = st.sidebar.number_input("OD 600", value = 0.248, format = "%.3f")
+col_b1, col_b2 = st.sidebar.columns(2)
+Guardar_analisis2 = col_b1.button("Guardar Registro")
+Borrar_analisis2 = col_b2.button("Borrar Registro")
+if Borrar_analisis2:
+    st.session_state.HistorialdeBiomasaSeca = []
+    st.sidebar.success("Calibrado borrado")
+if Guardar_analisis2:
+    grupo_base = condicion_nombre.strip()
+    replicas_existentes = [item for item in st.session_state.HistorialdeBiomasaSeca if item["Grupo"]==grupo_base]
+    num_replica = len(replicas_existentes)+1
+    st.session_state.HistorialdeBiomasaSeca.append({
+        "Grupo": grupo_base, "ID_Replica": num_replica, "Etiqueta completa": f"{grupo_base} (R{num_replica})",
+        "VolumenC": Volumen, "MasaR": MasaR, "MasaR+C": MasaRC, "DilucionMC": DilucionMC, "Abs600MC": OD600Mc
+    })
+    st.sidebar.succes(f"Guardado: {grupo_base} (Réplica #{num_replica})")
 st.sidebar.markdown("---")
 
 st.sidebar.header("Cinetica de cultivo")

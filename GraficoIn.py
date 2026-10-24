@@ -50,7 +50,7 @@ Borrar_analisis1 = col_b2.button("Borrar Calibrado")
 if Borrar_analisis1:
     st.session_state.HistorialdeCalibrado = []
     st.succes("Calibrado borrado")
-if Guardar_analisis:
+if Guardar_analisis1:
     try:
         Abs505CA = np.array([float(x) for x in input_Abs505CA.split()])
         ConcPatronCA = np.array([float(x) for x in input_ConcPatronCA.split()])

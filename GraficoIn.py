@@ -33,12 +33,12 @@ Guardar_analisis = col_b1.button("Guardar analisis")
 Borrar_analisis = col_b2.button("Borrar analisis")
 if Borrar_analisis:
     st.session_state.AnalisisBlancos = []
-    st.success("Analisis borrado")
+    st.sidebar.success("Analisis borrado")
 if Guardar_analisis:
     Abs600BI = np.array([float(x) for x in input_Abs600BI.split()])
     Abs505BI = np.array([float(x) for x in input_Abs505BI.split()])
     st.session_state.AnalisisBlancos.append({"ABS600BI": Abs600BI,"ABS505BI": Abs505BI})
-    st.success("Analisis guardado")
+    st.sidebar.success("Analisis guardado")
 st.sidebar.markdown("---")
 
 st.sidebar.header("Curva de calibración de la glucosa (ABS505)")
@@ -49,7 +49,7 @@ Guardar_analisis1 = col_b1.button("Guardar Calibrado")
 Borrar_analisis1 = col_b2.button("Borrar Calibrado")
 if Borrar_analisis1:
     st.session_state.HistorialdeCalibrado = []
-    st.success("Calibrado borrado")
+    st.sidebar.success("Calibrado borrado")
 if Guardar_analisis1:
     try:
         Abs505CA = np.array([float(x) for x in input_Abs505CA.split()])
@@ -58,7 +58,7 @@ if Guardar_analisis1:
             st.error("La cantidad de valores en concentracion y abs deben ser la misma")
         else:
             st.session_state.HistorialdeCalibrado.append({"ABS505Ca": Abs505CA,"ConcPatronCa": ConcPatronCA})
-            st.success(f"Replica # {len(st.session_state.HistorialdeCalibrado)} guardado con exito")
+            st.sidebar.success(f"Replica # {len(st.session_state.HistorialdeCalibrado)} guardado con exito")
     except ValueError:
         st.error("introduce los valores separados por espacios")
 st.sidebar.markdown("---")

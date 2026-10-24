@@ -91,7 +91,7 @@ if Guardar_analisis2:
         "Grupo": grupo_base, "ID_Replica": num_replica, "Etiqueta completa": f"{grupo_base} (R{num_replica})",
         "VolumenC": Volumen, "MasaR": MasaR, "MasaR+C": MasaRC, "DilucionMC": DilucionMC, "Abs600MC": OD600Mc
     })
-    st.sidebar.succes(f"Guardado: {grupo_base} (Réplica #{num_replica})")
+    st.sidebar.success(f"Guardado: {grupo_base} (Réplica #{num_replica})")
 st.sidebar.markdown("---")
 
 st.sidebar.header("Cinetica de cultivo")

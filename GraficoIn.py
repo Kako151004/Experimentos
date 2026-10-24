@@ -97,8 +97,8 @@ if Guardar_analisis2:
 st.sidebar.markdown("---")
 
 st.sidebar.header("Cinetica de cultivo")
-condicion_base1 = st.sidebar.selectbox("Selecciona la condición base", st.session_state.ListadeReactores)
-condicion_nombre1 = condicion_base1
+condicion_base2 = st.sidebar.selectbox("Selecciona la condición base", st.session_state.ListadeReactores)
+condicion_nombre2 = condicion_base2
 input_tiempoCC = st.sidebar.text_area("Tiempo (h)", "0 1 2 3 4 5 6 7 8 9 10 11 12")
 input_Dilucion600CC = st.sidebar.text_area("Dilución  OD (1:x)", "1 1 1 1 2 2 3 5 6 8 9 10 10")
 input_Abs600CC = st.sidebar.text_area("OD 600", "0.224 0.300 0.421 0.583 0.451 0.675 0.667 0.591 0.690 0.672 0.705 0.694 0.699 ")
@@ -110,7 +110,7 @@ Borrar_analisis3 = col_b2.button("Limpiar Replicas")
 
 if Borrar_analisis3:
     st.session_state.HistorialdeCineticaCultivo = []
-    st.success("Historial reiniciado")
+    st.sidebar.success("Historial reiniciado")
 if Guardar_analisis3:
     try:
         tiempoCC = np.array([float(x) for x in input_tiempoCC.split()])
@@ -121,13 +121,13 @@ if Guardar_analisis3:
         if len(tiempoCC) != len(Dilucion600CC) != len(Abs600CC) != len(Dilucion505CC) != len(Abs505CC):
             st.error("La cantidad de valores debe ser igual para todos los paremetros en esta seccion")
         else:
-            grupo_base1 = condicion_nombre.strip()
-            replicas_existentes1 = [item for item in st.session_state.HistorialdeCineticaCultivo if item["Grupo"]==grupo_base1]
-            num_replica1 = len(replicas_existentes1)+1
+            grupo_base2 = condicion_nombre2.strip()
+            replicas_existentes2 = [item for item in st.session_state.HistorialdeCineticaCultivo if item["Grupo"]==grupo_base2]
+            num_replica2 = len(replicas_existentes2)+1
             st.session_state.HistorialdeCineticaCultivo.append({
                 "TiempoCC": tiempoCC, "Dilucion600CC": Dilucion600CC, "Abs600CC": Abs600CC, "Dilucion505CC": Dilucion505CC, "Abs505CC": Abs505CC,
-                "Grupo": grupo_base1, "ID_Replica": num_replica1, "Etiqueta completa": f"{grupo_base1} (R{num_replica1})"})
-            st.sidebar.success(f"Guardado: {grupo_base1} (Réplica #{num_replica1})")
+                "Grupo": grupo_base2, "ID_Replica": num_replica2, "Etiqueta completa": f"{grupo_base2} (R{num_replica2})"})
+            st.sidebar.success(f"Guardado: {grupo_base2} (Réplica #{num_replica2})")
     except Exception as e:
         st.sidebar.error(f"Error procesando datos: {e}")
         

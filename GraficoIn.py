@@ -27,6 +27,8 @@ if "ListadeCondicionMS" not in st.session_state:
     
 if "HistorialdeBiomasaSeca" not in st.session_state:
     st.session_state.HistorialdeBiomasaSeca = []
+if "HistorialdeCineticaCultivo" not in st.session_state:
+    st.session_state.HistorialdeCineticaCultivo = []
 # Barra lateral
 st.sidebar.header("Parametros")
 st.sidebar.markdown("---")
@@ -49,7 +51,7 @@ st.sidebar.markdown("---")
 
 st.sidebar.header("Curva de calibración de la glucosa (ABS505)")
 input_Abs505CA = st.sidebar.text_input("Absorbancias (505 nm)", " 0.031 0.102 0.186 0.298 0.400 0.547 0.703 0.921")
-input_ConcPatronCA = st.sidebar.text_input("Absorbancias (g/L)", " 0.0 0.1 0.2 0.35 0.5 0.7 0.9 1.2")
+input_ConcPatronCA = st.sidebar.text_input("Concentración patron (g/L)", " 0.0 0.1 0.2 0.35 0.5 0.7 0.9 1.2")
 col_b1, col_b2 = st.sidebar.columns(2)
 Guardar_analisis1 = col_b1.button("Guardar Calibrado")
 Borrar_analisis1 = col_b2.button("Borrar Calibrado")
@@ -95,6 +97,41 @@ if Guardar_analisis2:
 st.sidebar.markdown("---")
 
 st.sidebar.header("Cinetica de cultivo")
+condicion_base1 = st.sidebar.selectbox("Selecciona la condición base", st.session_state.ListadeReactores)
+condicion_nombre1 = condicion_base1
+input_tiempoCC = st.sidebar.text_area("Tiempo (h)", "0 1 2 3 4 5 6 7 8 9 10 11 12")
+input_Dilucion600CC = st.sidebar.text_area("Dilución  OD (1:x)", "1 1 1 1 2 2 3 5 6 8 9 10 10")
+input_Abs600CC = st.sidebar.text_area("OD 600", "0.224 0.300 0.421 0.583 0.451 0.675 0.667 0.591 0.690 0.672 0.705 0.694 0.699 ")
+input_Dilucion505CC = st.sidebar.text_area("Dilucion glucosa", "10 10 10 10 10 10 10 5 5 5 5 2 2")
+input_Abs505CC = st.sidebar.text_area("Abs 505","0.514 0.512 0.513 0.487 0.479 0.447 0.423 0.677 0.558 0.410 0.284 0.436 0.357")
+col_b1, col_b2 = st.sidebar.columns(2)
+Guardar_analisis3 =col_b1.button("Guardar Replicas")
+Borrar_analisis3 = col_b2.button("Limpiar Replicas")
+
+if Borrar_analisis3:
+    st.session_state.HistorialdeCineticaCultivo = []
+    st.success("Historial reiniciado")
+if Guardar_analisis3:
+    try:
+        tiempoCC = np.array([float(x) for x in input_tiempoCC.split()])
+        Dilucion600CC = np.array([float(x) for x in input_Dilucion600CC.split()])
+        Abs600CC = np.array([float(x) for x in input_Abs600CC.split()])
+        Dilucion505CC = np.array([float(x) for x in input_Dilucion505CC.split()])
+        Abs505CC = np.array([float(x) for x in input_Abs505CC.split()])
+        if len(tiempoCC) != len(Dilucion600CC) != len(Abs600CC) != len(Dilucion505CC) != len(Abs505CC):
+            st.error("La cantidad de valores debe ser igual para todos los paremetros en esta seccion")
+        else:
+            grupo_base1 = condicion_nombre.strip()
+            replicas_existentes1 = [item for item in st.session_state.HistorialdeCineticaCultivo if item["Grupo"]==grupo_base1]
+            num_replica1 = len(replicas_existentes1)+1
+            st.session_state.HistorialdeCineticaCultivo.append({
+                "TiempoCC": tiempoCC, "Dilucion600CC": Dilucion600CC, "Abs600CC": Abs600CC, "Dilucion505CC": Dilucion505CC, "Abs505CC": Abs505CC,
+                "Grupo": grupo_base1, "ID_Replica": num_replica1, "Etiqueta completa": f"{grupo_base1} (R{num_replica1})"})
+            st.sidebar.success(f"Guardado: {grupo_base1} (Réplica #{num_replica1})")
+    except Exception as e:
+        st.sidebar.error(f"Error procesando datos: {e}")
+        
+    
 st.sidebar.markdown("---")
 
 st.sidebar.header("Biomasa durante el cultivo")

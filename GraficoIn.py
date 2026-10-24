@@ -70,7 +70,6 @@ if Guardar_analisis1:
 st.sidebar.markdown("---")
 
 st.sidebar.header("Calibración de biomasa seca frente a OD600")
-tipo_ingreso = st.sidebar.radio("Modo de condición")
 condicion_base = st.sidebar.selectbox("Selecciona la condición base", st.session_state.ListadeCondicionMS)
 condicion_nombre = condicion_base
 Volumen = st.sidebar.number_input("Volumen centrifugado (mL)", value = 50.00, format = "%.4f")

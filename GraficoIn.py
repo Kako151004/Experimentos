@@ -1,69 +1,73 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import linregress
 import streamlit as st
 import pandas as pd
-import numpy as np
 
-# Configuración de la página en modo ancho
-st.set_page_config(layout="wide", page_title="Simulador Climático Interactivo")
+# Encabezado
+st.set_page_config(page_title="Taller 1| Laboratorio de fermentaciones")
+st.title("Crecimiento microbiano| Del dato bruto a la cinética microbiana")
+st.write("Temas: Biomasa seca/ OD_600 / Glucosa / Crecimiento y consumo")
 
-st.title("🌍 Simulador Interactivo: Temperatura Global y el Ártico")
-st.markdown("**Instrucciones para la presentación:** Mueve la barra deslizante inferior para viajar en el tiempo desde la era preindustrial hasta las proyecciones futuras.")
-
-st.divider()
-
-# Barra deslizante interactiva para elegir el año
-year = st.slider("Selecciona el Año de Análisis:", min_value=1850, max_value=2060, value=2024, step=2)
-
-# Lógica de datos según el año seleccionado
-if year <= 1900:
-    temp = 0.0
-    co2 = 280
-    status = "Etapa Preindustrial (Equilibrio natural)"
-    desc = "Concentración estable de CO2. Los casquetes polares y el hielo marino se encuentran en su máxima estabilidad histórica."
-    # Puntos densos simulando hielo completo en el mapa
-    map_data = pd.DataFrame({'lat': np.random.uniform(75, 85, 100), 'lon': np.random.uniform(-180, 180, 100)})
-
-elif year <= 1980:
-    temp = round((year - 1900) * 0.004 + 0.1, 2)
-    co2 = int(280 + (year - 1950) * 0.7 if year >= 1950 else 280)
-    status = "Aceleración Industrial Temprana"
-    desc = "Comienza el aumento sostenido de emisiones por quema masiva de combustibles fósiles."
-    map_data = pd.DataFrame({'lat': np.random.uniform(73, 85, 70), 'lon': np.random.uniform(-180, 180, 70)})
-
-elif year <= 2026:
-    temp = round(1.2 + (year - 2020) * 0.06, 2)
-    co2 = int(415 + (year - 2020) * 3)
-    status = "⚠️ Actualidad (Récords de Calentamiento)"
-    desc = "Superamos los +1.5°C en años recientes (2024-2025). El Ártico sufre un calentamiento asimétrico (2 a 3 veces más rápido)."
-    map_data = pd.DataFrame({'lat': np.random.uniform(70, 85, 35), 'lon': np.random.uniform(-180, 180, 35)})
-
-else:
-    temp = round(1.6 + (year - 2026) * 0.025, 2)
-    co2 = int(430 + (year - 2026) * 2.5)
-    status = "🚨 Futuro Crítico / Zona de Puntos de Inflexión"
-    desc = "Rumbo a los 550 ppm. Alto riesgo de veranos libres de hielo en el Ártico y desestabilización de corrientes marinas."
-    map_data = pd.DataFrame({'lat': np.random.uniform(68, 82, 15), 'lon': np.random.uniform(-180, 180, 15)})
-
-# Estructura en dos columnas (Izquierda: Datos | Derecha: Mapa)
-col1, col2 = st.columns(2, gap="large")
-
-with col1:
-    st.subheader(f"📊 Año analizado: {year}")
+# Historiales
+if "HistorialdeCalibrado" not in st.session_state:
+    st.session_state.HistorialdeCalibrado = []
     
-    # Métricas cuantitativas visuales
-    st.metric(label="Aumento de Temperatura Media Global", value=f"+{temp} °C", delta="Respecto a 1850-1900")
-    st.metric(label="Concentración Atmosférica de CO₂", value=f"{co2} ppm", delta=f"+{co2 - 280} ppm sobre nivel natural")
-    
-    st.markdown("### Estado del Sistema Climático:")
-    st.info(f"**{status}**")
-    st.write(desc)
+if "HistorialdeDatos" not in st.session_state:
+    st.session_state.HistorialdeCalculos = []
 
-with col2:
-    st.subheader("🗺️ Vista Satelital: Retracción del Hielo Ártico")
-    st.markdown("Cada punto representa la presencia de capas de hielo estables. Nota cómo disminuyen con el tiempo:")
-    
-    # Mapa interactivo centrado en el Ártico
-    st.map(map_data, latitude=80.0, longitude=0.0, zoom=1.5)
-    st.caption("Simulación basada en la reducción de la extensión del hielo marino polar.")
+if "ListadeReactores" not in st.session_state:
+    st.session_state.ListadeReactores = ["Bioreactor 1", "Bioreactor 2", "Bioreactor 3"]
 
-st.divider()
-st.markdown("*Herramienta desarrollada para presentación académica de Biotecnología / Cambio Climático.*")
+if "AnalisisBlancos" not in st.session_state:
+    st.session_state.AnalisisBlancos = []
+# Barra lateral
+st.sidebar.header("Parametros")
+st.sidebar.markdown("---")
+
+st.sidebar.header("Analisis de los blancos independientes")
+input_Abs600BI = st.sidebar.text_input("Absorbancias (600 nm)", " 0.024 0.032 0.033 0.027 0.029")
+input_Abs505BI = st.sidebar.text_input("Absorbancias (505 nm)", " 0.024 0.032 0.033 0.027 0.029")
+col_b1, col_b2 = st.sidebar.columns(2)
+Guardar_analisis = col_b1.button("Guardar analisis")
+Borrar_analisis = col_b2.button("Borrar analisis")
+if Borrar_analisis:
+    st.session_state.AnalisisBlancos = []
+    st.succes("Analisis borrado")
+if Guardar_analisis:
+    Abs600BI = np.array([float(x) for x in input_Abs600BI.split()])
+    Abs505BI = np.array([float(x) for x in input_Abs505BI.split()])
+    st.session_state.AnalisisBlancos.append({"ABS600BI": Abs600BI,"ABS505BI": Abs505BI})
+    st.succes("Analisis guardado")
+st.sidebar.markdown("---")
+
+st.sidebar.header("Curva de calibración de la glucosa (ABS505)")
+input_Abs505CA = st.sidebar.text_input("Absorbancias (505 nm)", " 0.031 0.102 0.186 0.298 0.400 0.547 0.703 0.921")
+input_ConcPatronCA = st.sidebar.text_input("Absorbancias (g/L)", " 0.0 0.1 0.2 0.35 0.5 0.7 0.9 1.2")
+col_b1, col_b2 = st.sidebar.columns(2)
+Guardar_analisis1 = col_b1.button("Guardar Calibrado")
+Borrar_analisis1 = col_b2.button("Borrar Calibrado")
+if Borrar_analisis1:
+    st.session_state.HistorialdeCalibrado = []
+    st.succes("Calibrado borrado")
+if Guardar_analisis:
+    try:
+        Abs505CA = np.array([float(x) for x in input_Abs505CA.split()])
+        ConcPatronCA = np.array([float(x) for x in input_ConcPatronCA.split()])
+        if len(Abs505CA) != len(ConcPatronCA):
+            st.error("La cantidad de valores en concentracion y abs deben ser la misma")
+        else:
+            st.session_state.HistorialdeCalibrado.append({"ABS505Ca": Abs505CA,"ConcPatronCa": ConcPatronCA})
+            st.succes(f"Replica # {len(st.session_state.HistorialdeCalibrado)} guardado con exito")
+    except ValueError:
+        st.error("introduce los valores separados por espacios")
+st.sidebar.markdown("---")
+
+st.sidebar.header("Calibración de biomasa seca frente a OD600")
+st.sidebar.markdown("---")
+
+st.sidebar.header("Cinetica de cultivo")
+st.sidebar.markdown("---")
+
+st.sidebar.header("Biomasa durante el cultivo")
+

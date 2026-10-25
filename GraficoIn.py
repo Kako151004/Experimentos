@@ -134,7 +134,7 @@ if Guardar_analisis3:
 st.sidebar.markdown("---")
 
 st.sidebar.header("Biomasa durante el cultivo")
-condicion_base3 = st.sidebar.selectbox("Selecciona la condición base", st.session_state.ListadeReactores)
+condicion_base3 = st.sidebar.selectbox("Selecciona el reactor", st.session_state.ListadeReactores)
 condicion_nombre3 = condicion_base3
 input_tiempoMSC = st.sidebar.text_area("Tiempo (h)", "0 3 6 9 12")
 Volumen1 = st.sidebar.number_input("Volumen centrifugado (mL)", value = 50.00, format = "%.4f")

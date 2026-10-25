@@ -29,9 +29,10 @@ if "HistorialdeBiomasaSeca" not in st.session_state:
     st.session_state.HistorialdeBiomasaSeca = []
 if "HistorialdeCineticaCultivo" not in st.session_state:
     st.session_state.HistorialdeCineticaCultivo = []
+    
+if "HistorialdeBiomasaSecaCinetico" not in st.session_state:
+    st.session_state.HistorialdeBiomasaSecaCinetico = []
 # Barra lateral
-st.sidebar.header("Parametros")
-st.sidebar.markdown("---")
 
 st.sidebar.header("Analisis de los blancos independientes")
 input_Abs600BI = st.sidebar.text_input("Absorbancias (600 nm)", " 0.024 0.032 0.033 0.027 0.029")
@@ -130,9 +131,37 @@ if Guardar_analisis3:
             st.sidebar.success(f"Guardado: {grupo_base2} (Réplica #{num_replica2})")
     except Exception as e:
         st.sidebar.error(f"Error procesando datos: {e}")
-        
-    
 st.sidebar.markdown("---")
 
 st.sidebar.header("Biomasa durante el cultivo")
+condicion_base3 = st.sidebar.selectbox("Selecciona la condición base", st.session_state.ListadeReactores)
+condicion_nombre3 = condicion_base3
+input_tiempoMSC = st.sidebar.text_area("Tiempo (h)", "0 3 6 9 12")
+Volumen1 = st.sidebar.number_input("Volumen centrifugado (mL)", value = 50.00, format = "%.4f")
+input_MasaS_MSC = st.sidebar.text_area("Masa seca (g)", "15.2403 15.3232 14.4242 14.2118 14.1435")
+input_MasaSC_MSC = st.sidebar.text_area("Masa seca + celulas (g)", "15.2403 15.3232 14.4242 14.2118 14.1435")
+col_b1, col_b2 = st.sidebar.columns(2)
+Guardar_analisis4 =col_b1.button("Almacenar Replicas")
+Borrar_analisis4 = col_b2.button("Eliminar Replicas")
 
+if Borrar_analisis4:
+    st.session_state.HistorialdeBiomasaSecaCinetico = []
+    st.sidebar.success("Historial reiniciado")
+if Guardar_analisis4:
+    try:
+        tiempoMSC = np.array([float(x) for x in input_tiempoMSC.split()])
+        MasaS_MSC = np.array([float(x) for x in input_MasaS_MSC.split()])
+        MasaSC_MSC = np.array([float(x) for x in input_MasaSC_MSC.split()])
+        Abs505CC = np.array([float(x) for x in input_Abs505CC.split()])
+        if len(tiempoMSC) != len(MasaS_MSC) != len(MasaSC_MSC):
+            st.error("La cantidad de valores debe ser igual para todos los paremetros en esta seccion")
+        else:
+            grupo_base3 = condicion_nombre3.strip()
+            replicas_existentes3 = [item for item in st.session_state.HistorialdeBiomasaSecaCinetico if item["Grupo"]==grupo_base3]
+            num_replica3 = len(replicas_existentes3)+1
+            st.session_state.HistorialdeBiomasaSecaCinetico.append({
+                "TiempoMSC": tiempoMSC, "MasaS_MSC": MasaS_MSC, "MasaSC_MSC": MasaSC_MSC,
+                "Grupo": grupo_base3, "ID_Replica": num_replica3, "Etiqueta completa": f"{grupo_base3} (R{num_replica3})"})
+            st.sidebar.success(f"Guardado: {grupo_base3} (Réplica #{num_replica3})")
+    except Exception as e:
+        st.sidebar.error(f"Error procesando datos: {e}")

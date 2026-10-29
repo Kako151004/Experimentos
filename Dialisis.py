@@ -484,7 +484,10 @@ if len(historial)>0:
                     st.pyplot(fig_hm)
                 else:
                     st.warning(f"Se detectó solo {len(df_heatmap)} condición(es). El mapa de calor requiere múltiples condiciones (temperaturas y RPM) para generar la cuadrícula. Revisa cómo se están guardando los nombres en `datos_agrupados`.")
-                     matriz_datos = []
+                
+            
+        
+                matriz_datos1 = []
                 
                 # Depuración: muestra las claves disponibles para verificar si están todas
                 # st.write("Grupos encontrados en memoria:", list(datos_agrupados.keys()))
@@ -508,9 +511,9 @@ if len(historial)>0:
                         rpm = d_g.get("rpm", None)
                         
                     if temp is not None and rpm is not None:
-                        matriz_datos.append({"Temperatura": temp, "RPM": rpm, "t80": t_80})
+                        matriz_datos1.append({"Temperatura": temp, "RPM": rpm, "t80": t_80})
 
-                df_heatmap = pd.DataFrame(matriz_datos)
+                df_heatmap = pd.DataFrame(matriz_datos1)
                 
                 if not df_heatmap.empty and len(df_heatmap) > 1:
                     # Creamos la tabla pivote con todas las temperaturas y RPM recopiladas

@@ -423,9 +423,7 @@ if len(historial)>0:
         elif sub_vista == "Mapa de Calor (Temperatura vs Agitación)":
                 st.write("#### Mapa de Calor: Interacción de Temperatura y Agitación ($k_{app}$)")
                 
-                import numpy as np
-                import pandas as pd
-                import matplotlib.pyplot as plt
+                
                 import re
 
                 matriz_datos = []
@@ -486,3 +484,62 @@ if len(historial)>0:
                     st.pyplot(fig_hm)
                 else:
                     st.warning(f"Se detectó solo {len(df_heatmap)} condición(es). El mapa de calor requiere múltiples condiciones (temperaturas y RPM) para generar la cuadrícula. Revisa cómo se están guardando los nombres en `datos_agrupados`.")
+                     matriz_datos = []
+                
+                # Depuración: muestra las claves disponibles para verificar si están todas
+                # st.write("Grupos encontrados en memoria:", list(datos_agrupados.keys()))
+                
+                for g_nombre, d_g in datos_agrupados.items():
+                    t_80 = d_g.get("t80", 0.0)
+                    
+                    temp = None
+                    rpm = None
+                    
+                    # Intentamos extraer todos los números del nombre del grupo
+                    nums = re.findall(r"[-+]?\d*\.\d+|\d+", str(g_nombre))
+                    
+                    if len(nums) >= 2:
+                        # Asumimos que el primer número es la temperatura y el segundo es la RPM
+                        temp = float(nums[0])
+                        rpm = float(nums[1])
+                    else:
+                        # Si tus nombres no tienen los números, puedes buscarlos en el diccionario d_g
+                        temp = d_g.get("temperatura", None)
+                        rpm = d_g.get("rpm", None)
+                        
+                    if temp is not None and rpm is not None:
+                        matriz_datos.append({"Temperatura": temp, "RPM": rpm, "t80": t_80})
+
+                df_heatmap = pd.DataFrame(matriz_datos)
+                
+                if not df_heatmap.empty and len(df_heatmap) > 1:
+                    # Creamos la tabla pivote con todas las temperaturas y RPM recopiladas
+                    pivote = df_heatmap.pivot(index="RPM", columns="Temperatura", values="t80")
+                    
+                    fig_hm, ax_hm = plt.subplots(figsize=(8, 5))
+                    cax = ax_hm.imshow(pivote.values, cmap="plasma", aspect="auto", origin="lower")
+                    
+                    ax_hm.set_xticks(np.arange(len(pivote.columns)))
+                    ax_hm.set_yticks(np.arange(len(pivote.index)))
+                    ax_hm.set_xticklabels([f"{t} °C" for t in pivote.columns])
+                    ax_hm.set_yticklabels([f"{r} rpm" for r in pivote.index])
+                    
+                    ax_hm.set_xlabel("Temperatura (°C)")
+                    ax_hm.set_ylabel("Agitación (RPM)")
+                    ax_hm.set_title("Mapa de Calor: $T_{80}$ según Temperatura y Agitación")
+                    
+                    cbar = fig_hm.colorbar(cax)
+                    cbar.set_label("$T_{80}$")
+                    
+                    # Anotar los valores numéricos en cada celda de la cuadrícula
+                    for i in range(len(pivote.index)):
+                        for j in range(len(pivote.columns)):
+                            val = pivote.values[i, j]
+                            if not np.isnan(val):
+                                ax_hm.text(j, i, f"{val:.4f}", ha="center", va="center", color="black", fontweight="bold")
+                                
+                    plt.tight_layout()
+                    st.pyplot(fig_hm)
+                else:
+                    st.warning(f"Se detectó solo {len(df_heatmap)} condición(es). El mapa de calor requiere múltiples condiciones (temperaturas y RPM) para generar la cuadrícula. Revisa cómo se están guardando los nombres en `datos_agrupados`.")
+

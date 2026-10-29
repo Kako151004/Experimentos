@@ -486,7 +486,7 @@ if len(historial)>0:
                     st.warning(f"Se detectó solo {len(df_heatmap)} condición(es). El mapa de calor requiere múltiples condiciones (temperaturas y RPM) para generar la cuadrícula. Revisa cómo se están guardando los nombres en `datos_agrupados`.")
                 
             
-        
+                st.write("#### Mapa de Calor: Interacción de Temperatura y Agitación ($T_{80}$)")
                 matriz_datos1 = []
                 
                 # Depuración: muestra las claves disponibles para verificar si están todas
@@ -532,7 +532,7 @@ if len(historial)>0:
                     ax_hm.set_title("Mapa de Calor: $T_{80}$ según Temperatura y Agitación")
                     
                     cbar = fig_hm.colorbar(cax)
-                    cbar.set_label("$T_{80}$")
+                    cbar.set_label("$T_{80}$ (min)")
                     
                     # Anotar los valores numéricos en cada celda de la cuadrícula
                     for i in range(len(pivote.index)):
